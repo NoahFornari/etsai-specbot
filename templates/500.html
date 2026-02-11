@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 — ETSAI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] } } } }
+    </script>
+    <style>
+        :root { --surface-0: #ffffff; --surface-1: #faf8f5; --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e; --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f; }
+        html.dark { --surface-0: #1c1917; --surface-1: #171412; --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c; --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e; }
+        body { background: var(--surface-1); color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
+        .gradient-text { background: linear-gradient(135deg, var(--brand), var(--brand-light), var(--brand-lighter)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="text-center" style="animation: fadeInUp 0.5s ease;">
+        <div class="text-8xl font-bold font-mono mb-4" style="color: #dc2626; opacity: 0.3;">500</div>
+        <h1 class="font-display text-2xl mb-2" style="color: var(--text-primary);">Something went wrong</h1>
+        <p class="text-sm mb-8" style="color: var(--text-secondary);">We hit an unexpected error. Please try again or contact support if the issue persists.</p>
+        <div class="flex justify-center gap-3">
+            {% if session.get('seller_id') %}<a href="/dashboard" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold no-underline" style="background: linear-gradient(135deg, #4a6741, #5c7d52); color: white; box-shadow: 0 2px 8px rgba(74,103,65,0.25);">Dashboard</a>{% endif %}
+            <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold no-underline" style="background: var(--surface-0); color: var(--text-primary); border: 1px solid var(--text-tertiary);">Home</a>
+        </div>
+        <div class="mt-12">
+            <span class="inline-flex items-center gap-1.5 text-lg font-extrabold"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+        </div>
+    </div>
+</body>
+</html>

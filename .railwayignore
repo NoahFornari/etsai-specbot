@@ -1,0 +1,12 @@
+nul
+__pycache__
+*.db
+*.db-wal
+*.db-shm
+.env
+.claude
+backups
+ETSAI_Pitch.html
+ETSAI_Business_Case.md
+ETSAI_Video_Script.md
+seed_demo.py

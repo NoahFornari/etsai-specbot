@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETSAI — AI-Powered Spec Collection for Etsy Custom Orders</title>
+    <meta name="description" content="Replace hours of Etsy messaging with a single smart link. ETSAI uses AI to collect custom order specs from your buyers in under 2 minutes.">
+    <meta property="og:title" content="ETSAI — AI Spec Collection for Etsy Sellers">
+    <meta property="og:description" content="Stop messaging. Start making. Automate custom order spec collection with AI-powered conversations.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://etsai.com">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ETSAI — AI Spec Collection for Etsy Sellers">
+    <meta name="twitter:description" content="Replace hours of Etsy messaging with a single smart link.">
+    <link rel="canonical" href="https://etsai.com">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] },
+          colors: {
+            forest: { 400: '#5c7d52', 500: '#4a6741', 600: '#3d5a37' },
+            sage: { 400: '#8fa382', 500: '#7a8c6e' },
+            cream: { 50: '#f5efe4', 100: '#ebe3d4', 200: '#dfd4c4' },
+            bark: { 800: '#292524', 900: '#1c1917' },
+          }
+        }}
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #fdf9f3; --surface-1: #f5efe4; --surface-2: #ebe3d4; --surface-3: #dfd4c4;
+            --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e;
+            --border-default: #d5c8b4; --border-subtle: #e6dbd0;
+            --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f;
+            --error: #dc2626; --error-bg: rgba(220, 38, 38, 0.08);
+        }
+        html.dark {
+            --surface-0: #1c1917; --surface-1: #171412; --surface-2: #292524; --surface-3: #3b3532;
+            --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c;
+            --border-default: #3b3532; --border-subtle: #292524;
+            --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e;
+            --error: #f87171; --error-bg: rgba(220, 38, 38, 0.12);
+        }
+        body { background: var(--surface-1); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+
+        /* Animated gradient mesh background */
+        .gradient-mesh {
+            position: fixed; inset: 0; z-index: -1; overflow: hidden;
+            pointer-events: none;
+        }
+        .gradient-blob {
+            position: absolute;
+            filter: blur(80px); will-change: transform;
+            opacity: 0.4;
+        }
+        html.dark .gradient-blob { opacity: 0.18; }
+        /* Blob 1: Warm coral — wide horizontal branch, top-right */
+        .blob-1 {
+            width: 700px; height: 250px; top: -5%; right: -5%;
+            background: radial-gradient(ellipse, #f4845f 0%, transparent 70%);
+            clip-path: polygon(0% 40%, 15% 10%, 45% 0%, 75% 12%, 100% 5%, 100% 55%, 85% 100%, 55% 80%, 25% 95%, 0% 70%);
+            animation: drift1 26s ease-in-out infinite;
+        }
+        /* Blob 2: Golden peach — tall vertical branch, left */
+        .blob-2 {
+            width: 250px; height: 600px; top: 20%; left: -5%;
+            background: radial-gradient(ellipse, #fbb98c 0%, transparent 70%);
+            clip-path: polygon(30% 0%, 75% 5%, 100% 25%, 80% 55%, 100% 80%, 65% 100%, 35% 92%, 0% 100%, 15% 55%, 0% 18%);
+            opacity: 0.35;
+            animation: drift2 22s ease-in-out infinite;
+        }
+        html.dark .blob-2 { opacity: 0.15; }
+        /* Blob 3: Deep terracotta — wide low branch, bottom-right */
+        .blob-3 {
+            width: 650px; height: 200px; bottom: 5%; right: 5%;
+            background: radial-gradient(ellipse, #e07a5f 0%, transparent 70%);
+            clip-path: polygon(8% 0%, 35% 8%, 100% 25%, 92% 55%, 100% 88%, 60% 100%, 22% 85%, 0% 60%, 5% 28%);
+            opacity: 0.3;
+            animation: drift3 28s ease-in-out infinite;
+        }
+        html.dark .blob-3 { opacity: 0.12; }
+        /* Blob 4: Pale blush — organic accent, top-left */
+        .blob-4 {
+            width: 350px; height: 350px; top: 5%; left: 15%;
+            background: radial-gradient(ellipse, #ffd5c2 0%, transparent 70%);
+            clip-path: polygon(0% 22%, 28% 0%, 72% 8%, 100% 38%, 82% 78%, 100% 100%, 52% 92%, 0% 100%, 12% 52%);
+            opacity: 0.3;
+            animation: drift4 24s ease-in-out infinite;
+        }
+        html.dark .blob-4 { opacity: 0.12; }
+        /* Blob 5: Rose peach — wide bottom-left branch */
+        .blob-5 {
+            width: 600px; height: 200px; bottom: 15%; left: -8%;
+            background: radial-gradient(ellipse, #d4846a 0%, transparent 70%);
+            clip-path: polygon(0% 12%, 38% 0%, 100% 18%, 92% 48%, 100% 82%, 68% 100%, 32% 95%, 0% 72%);
+            opacity: 0.3;
+            animation: drift5 30s ease-in-out infinite;
+        }
+        html.dark .blob-5 { opacity: 0.12; }
+
+        @keyframes drift1 {
+            0%, 100% { transform: rotate(-12deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(-8deg) translate(-40px, 30px) scale(1.05); }
+            66% { transform: rotate(-16deg) translate(20px, -20px) scale(0.95); }
+        }
+        @keyframes drift2 {
+            0%, 100% { transform: rotate(18deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(22deg) translate(30px, -20px) scale(1.08); }
+            66% { transform: rotate(14deg) translate(-15px, 25px) scale(0.92); }
+        }
+        @keyframes drift3 {
+            0%, 100% { transform: rotate(-22deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(-18deg) translate(-30px, -20px) scale(1.03); }
+            66% { transform: rotate(-26deg) translate(25px, 15px) scale(0.97); }
+        }
+        @keyframes drift4 {
+            0%, 100% { transform: rotate(8deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(12deg) translate(20px, 15px) scale(1.06); }
+            66% { transform: rotate(4deg) translate(-15px, -20px) scale(0.94); }
+        }
+        @keyframes drift5 {
+            0%, 100% { transform: rotate(-18deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(-14deg) translate(15px, -25px) scale(1.04); }
+            66% { transform: rotate(-22deg) translate(-25px, 10px) scale(0.96); }
+        }
+        @keyframes humFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .gradient-blob, [style*="humFloat"] { animation: none !important; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+        .delay-6 { animation-delay: 0.6s; }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        /* Chamfered button shape — 8-sided octagonal corners */
+        .btn-primary, button[type="submit"] {
+            clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4a6741, #5c7d52);
+            color: white; border: none; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 2px 6px rgba(74, 103, 65, 0.3));
+            border-radius: 0;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05) drop-shadow(0 4px 10px rgba(74, 103, 65, 0.35));
+        }
+        .btn-primary:active { transform: translateY(0); filter: brightness(0.97) drop-shadow(0 2px 4px rgba(74, 103, 65, 0.3)); }
+
+        /* Glassmorphism feature cards — chamfered octagonal */
+        .feature-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 0; padding: 1.75rem;
+            clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 1px 3px rgba(44, 24, 16, 0.04)) drop-shadow(0 4px 16px rgba(44, 24, 16, 0.03));
+        }
+        .feature-card:hover {
+            transform: translateY(-3px);
+            filter: drop-shadow(0 4px 12px rgba(44, 24, 16, 0.06)) drop-shadow(0 12px 32px rgba(44, 24, 16, 0.06));
+        }
+        html.dark .feature-card {
+            background: rgba(28, 25, 23, 0.55);
+            border-color: rgba(255, 255, 255, 0.06);
+            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15));
+        }
+        html.dark .feature-card:hover {
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3)) drop-shadow(0 12px 32px rgba(0, 0, 0, 0.2));
+        }
+
+        .step-line { width: 2px; height: 40px; background: var(--border-default); margin: 0 auto; }
+        .step-dot {
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.875rem; color: white;
+            background: linear-gradient(135deg, #4a6741, #5c7d52);
+            box-shadow: 0 2px 8px rgba(74, 103, 65, 0.3);
+        }
+
+        /* Glassmorphism auth card — chamfered octagonal */
+        .auth-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 0; overflow: hidden;
+            clip-path: polygon(18px 0%, calc(100% - 18px) 0%, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0% calc(100% - 18px), 0% 18px);
+            filter: drop-shadow(0 4px 16px rgba(44, 24, 16, 0.06)) drop-shadow(0 12px 48px rgba(44, 24, 16, 0.06));
+        }
+        html.dark .auth-card {
+            background: rgba(28, 25, 23, 0.65);
+            border-color: rgba(255, 255, 255, 0.06);
+            filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 12px 48px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Glassmorphism nav */
+        .home-nav {
+            backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            background: rgba(245, 239, 228, 0.6);
+            border-color: var(--border-default);
+        }
+        html.dark .home-nav {
+            background: rgba(28, 25, 23, 0.6);
+        }
+
+        .flash { border-left: 4px solid; border-radius: 12px; font-size: 0.875rem; animation: fadeInUp 0.3s ease; }
+        .flash.error { background: var(--error-bg); color: var(--error); border-left-color: var(--error); }
+        .flash.success { background: rgba(122,140,110,0.1); color: #7a8c6e; border-left-color: #7a8c6e; }
+        html.dark .flash.error { background: var(--error-bg); }
+        html.dark .flash.success { background: rgba(122,140,110,0.12); }
+
+        input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(74,103,65,0.12); }
+        html.dark input { background: var(--surface-2); border-color: var(--surface-3); color: var(--text-primary); }
+        html.dark input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(107,148,96,0.15); }
+
+        .tab-active { color: var(--text-primary); border-bottom: 2px solid var(--brand); }
+        .tab-inactive { color: var(--text-tertiary); border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: var(--text-secondary); }
+
+        .category-tag {
+            display: inline-block; padding: 0.375rem 0.875rem; border-radius: 9999px; font-size: 0.75rem;
+            font-weight: 500; background: var(--surface-2); color: var(--text-secondary); transition: all 0.2s;
+        }
+        .category-tag:hover { background: rgba(74,103,65,0.1); color: var(--brand); }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+    <!-- Animated gradient mesh background -->
+    <div class="gradient-mesh" aria-hidden="true">
+        <div class="gradient-blob blob-1"></div>
+        <div class="gradient-blob blob-2"></div>
+        <div class="gradient-blob blob-3"></div>
+        <div class="gradient-blob blob-4"></div>
+        <div class="gradient-blob blob-5"></div>
+    </div>
+
+    <!-- Top bar -->
+    <nav class="home-nav fixed top-0 left-0 right-0 z-50 border-b">
+        <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <div class="flex items-center gap-5">
+                <a href="#pricing" class="hidden md:inline text-sm font-medium no-underline transition-colors" style="color: var(--text-secondary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-secondary)'">Pricing</a>
+                <a href="#faq" class="hidden md:inline text-sm font-medium no-underline transition-colors" style="color: var(--text-secondary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-secondary)'">FAQ</a>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg transition-colors" style="color: var(--text-tertiary);" aria-label="Toggle dark mode">
+                    <svg class="w-4.5 h-4.5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg class="w-4.5 h-4.5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+                <a href="#auth" class="text-sm font-semibold no-underline transition-colors" style="color: var(--brand);">Log In</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-6 pt-24 pb-16 relative">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }} px-4 py-3 mb-5">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <!-- Hero -->
+        <div class="text-center mb-20 relative animate-in">
+            <div class="mx-auto mb-6" style="width: 96px; height: 96px; animation: humFloat 3s ease-in-out infinite;">
+                <svg viewBox="0 0 48 48" fill="none" style="width: 100%; height: 100%; filter: drop-shadow(0 4px 12px rgba(74, 103, 65, 0.2));">
+                    <ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/>
+                    <ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/>
+                    <ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/>
+                    <circle cx="27" cy="15" r="9" fill="#4a6741"/>
+                    <path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/>
+                    <circle cx="31" cy="13" r="3" fill="white"/>
+                    <circle cx="32" cy="13" r="1.8" fill="#2c1810"/>
+                    <circle cx="32.5" cy="12" r="0.7" fill="white"/>
+                    <path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/>
+                </svg>
+            </div>
+            <p class="text-sm font-semibold tracking-wide uppercase mb-4" style="color: var(--brand);">Your AI assistant for custom orders</p>
+            <h1 class="font-display text-5xl md:text-6xl mb-6 leading-tight" style="color: var(--text-primary);">
+                Stop playing 20 questions<br>with your buyers.
+            </h1>
+            <p class="text-lg max-w-2xl mx-auto leading-relaxed mb-8" style="color: var(--text-secondary);">
+                ETSAI collects every custom order detail through a friendly AI chat. Your buyer gets a link. You get a complete spec sheet. No more back-and-forth.
+            </p>
+            <a href="#auth" class="btn-primary px-8 py-3.5 rounded-xl text-base font-semibold inline-block no-underline">
+                Start Free
+            </a>
+            <p class="text-xs mt-4" style="color: var(--text-tertiary);">14-day free trial. No credit card needed.</p>
+        </div>
+
+        <!-- How It Works -->
+        <div class="mb-20 animate-in delay-1">
+            <h2 class="font-display text-3xl text-center mb-12" style="color: var(--text-primary);">How it works</h2>
+
+            <div class="grid md:grid-cols-3 gap-8 relative">
+                <!-- Connecting line (desktop only) -->
+                <div class="hidden md:block absolute top-[28px] left-[16.7%] right-[16.7%] h-0.5" style="background: linear-gradient(90deg, var(--brand), var(--brand-light), var(--brand-lighter)); opacity: 0.3;"></div>
+
+                <div class="text-center relative">
+                    <div class="step-dot mx-auto mb-5 relative z-10">1</div>
+                    <h3 class="text-base font-semibold mb-2" style="color: var(--text-primary);">Add your product</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Describe what you sell. Our AI instantly generates the perfect intake questions for your buyers.</p>
+                </div>
+                <div class="text-center relative">
+                    <div class="step-dot mx-auto mb-5 relative z-10">2</div>
+                    <h3 class="text-base font-semibold mb-2" style="color: var(--text-primary);">Send the link</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">After a sale, share a simple link. Via Etsy messages, email, text -- however you communicate.</p>
+                </div>
+                <div class="text-center relative">
+                    <div class="step-dot mx-auto mb-5 relative z-10">3</div>
+                    <h3 class="text-base font-semibold mb-2" style="color: var(--text-primary);">Get complete specs</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Your buyer chats with a friendly AI that collects every detail. You get an organized spec sheet, ready to fulfill.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Before / After -->
+        <div class="mb-20 animate-in delay-2">
+            <h2 class="font-display text-3xl text-center mb-10" style="color: var(--text-primary);">The difference</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Before -->
+                <div class="feature-card" style="border-color: rgba(220,38,38,0.15);">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5" style="color: #dc2626;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <h3 class="text-sm font-bold uppercase tracking-wider" style="color: #dc2626;">Without ETSAI</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-start gap-2"><span style="color: #dc2626;">&#x2715;</span> 4-8 messages back and forth per order</li>
+                        <li class="flex items-start gap-2"><span style="color: #dc2626;">&#x2715;</span> 2-5 days to collect all specs</li>
+                        <li class="flex items-start gap-2"><span style="color: #dc2626;">&#x2715;</span> ~20 hours/month on messaging (at 50 orders)</li>
+                        <li class="flex items-start gap-2"><span style="color: #dc2626;">&#x2715;</span> Specs scattered across message threads</li>
+                        <li class="flex items-start gap-2"><span style="color: #dc2626;">&#x2715;</span> Buyers forget to reply for days</li>
+                    </ul>
+                </div>
+                <!-- After -->
+                <div class="feature-card" style="border-color: rgba(74,103,65,0.2);">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <h3 class="text-sm font-bold uppercase tracking-wider" style="color: var(--brand);">With ETSAI</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-start gap-2"><span style="color: var(--brand);">&#x2713;</span> 1 link, 1 conversation</li>
+                        <li class="flex items-start gap-2"><span style="color: var(--brand);">&#x2713;</span> Under 2 minutes to complete</li>
+                        <li class="flex items-start gap-2"><span style="color: var(--brand);">&#x2713;</span> ~0 hours/month — it's automated</li>
+                        <li class="flex items-start gap-2"><span style="color: var(--brand);">&#x2713;</span> Clean spec sheet, organized and exportable</li>
+                        <li class="flex items-start gap-2"><span style="color: var(--brand);">&#x2713;</span> Buyers finish in one sitting</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Demo -->
+        <div id="demo" class="mb-20 animate-in delay-3">
+            <h2 class="font-display text-3xl text-center mb-3" style="color: var(--text-primary);">See it in action</h2>
+            <p class="text-center text-sm mb-8" style="color: var(--text-secondary);">Watch how ETSAI collects a full set of custom order specs in under 2 minutes.</p>
+            <div class="feature-card max-w-3xl mx-auto" style="padding: 0; overflow: hidden;">
+                <!-- Replace the placeholder below with your YouTube/Loom embed -->
+                <div id="video-placeholder" class="flex flex-col items-center justify-center py-20 px-8 text-center" style="background: var(--surface-2); min-height: 400px;">
+                    <svg class="w-16 h-16 mb-4" style="color: var(--brand); opacity: 0.4;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"/></svg>
+                    <p class="text-sm font-medium mb-1" style="color: var(--text-primary);">Demo video coming soon</p>
+                    <p class="text-xs" style="color: var(--text-tertiary);">In the meantime, sign up and try it yourself — it takes 30 seconds.</p>
+                </div>
+                <!-- To embed a video, replace the div above with:
+                <iframe width="100%" height="400" src="https://www.youtube.com/embed/YOUR_VIDEO_ID" frameborder="0" allowfullscreen></iframe>
+                -->
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="mb-20 animate-in delay-4">
+            <h2 class="font-display text-3xl text-center mb-3" style="color: var(--text-primary);">Everything you need</h2>
+            <p class="text-center text-sm mb-10" style="color: var(--text-secondary);">Built specifically for custom order sellers.</p>
+
+            <div class="grid md:grid-cols-3 gap-5">
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(74,103,65,0.1);">
+                        <svg class="w-5 h-5" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">AI-Powered Questions</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Add a product, and the AI generates exactly the right intake questions. Ring sizes, engraving text, color choices -- it knows what to ask.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(122,140,110,0.1);">
+                        <svg class="w-5 h-5" style="color: #7a8c6e;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">Conversational Collection</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Feels like texting a friend, not filling out a boring form. Buyers love it. You get better answers.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(217,119,6,0.1);">
+                        <svg class="w-5 h-5" style="color: #d97706;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">Etsy Integration</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Connect your Etsy shop. Import products with one click. Auto-detect new orders. Intake links ready to share.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(74,103,65,0.1);">
+                        <svg class="w-5 h-5" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">Real-Time Dashboard</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Watch specs roll in live. Track every order's progress. Copy intake links with one click.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(122,140,110,0.1);">
+                        <svg class="w-5 h-5" style="color: #7a8c6e;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">Smart Validation</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Character limits, option constraints, required fields -- the AI enforces them all so you never get unusable answers.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background: rgba(74,103,65,0.06);">
+                        <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold mb-1.5" style="color: var(--text-primary);">Escalation Alerts</h3>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">If a buyer gets confused, wants to cancel, or asks something only you can answer — you get an instant email alert to step in.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social proof / categories -->
+        <div class="text-center mb-20 animate-in delay-5">
+            <p class="text-sm font-medium mb-4" style="color: var(--text-secondary);">Built for custom order sellers. Works for any product that needs specs.</p>
+            <div class="flex flex-wrap justify-center gap-2">
+                <span class="category-tag">Jewelry</span>
+                <span class="category-tag">Portraits</span>
+                <span class="category-tag">Apparel</span>
+                <span class="category-tag">Home Decor</span>
+                <span class="category-tag">Custom Signs</span>
+                <span class="category-tag">Engraving</span>
+                <span class="category-tag">Print on Demand</span>
+                <span class="category-tag">Pet Products</span>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div id="pricing" class="mb-20 animate-in delay-5">
+            <h2 class="font-display text-3xl text-center mb-3" style="color: var(--text-primary);">Simple pricing</h2>
+            <p class="text-center text-sm mb-10" style="color: var(--text-secondary);">Start free. Upgrade when you're ready.</p>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Free -->
+                <div class="feature-card text-center">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-tertiary);">Free Trial</p>
+                    <p class="text-3xl font-bold mb-1" style="color: var(--text-primary);">$0</p>
+                    <p class="text-xs mb-5" style="color: var(--text-tertiary);">for 14 days</p>
+                    <ul class="text-sm space-y-2 mb-6 text-left" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 10 orders/month</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 3 products</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Full AI features</li>
+                    </ul>
+                    <a href="#auth" class="block text-center py-2.5 text-sm font-semibold no-underline transition-all" style="background: var(--surface-2); color: var(--text-primary); clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);">Get Started</a>
+                </div>
+
+                <!-- Starter -->
+                <div class="feature-card text-center">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-tertiary);">Starter</p>
+                    <p class="text-3xl font-bold mb-1" style="color: var(--text-primary);">$29</p>
+                    <p class="text-xs mb-5" style="color: var(--text-tertiary);">per month</p>
+                    <ul class="text-sm space-y-2 mb-6 text-left" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 50 orders/month</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 15 products</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Email notifications</li>
+                    </ul>
+                    <a href="#auth" class="block text-center py-2.5 text-sm font-semibold no-underline transition-all" style="background: var(--surface-2); color: var(--text-primary); clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);">Start Trial</a>
+                </div>
+
+                <!-- Pro (highlighted) -->
+                <div class="feature-card text-center" style="border-color: var(--brand); border-width: 2px;">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-tertiary);">Pro</p>
+                    <p class="text-3xl font-bold mb-1" style="color: var(--brand);">$59</p>
+                    <p class="text-xs mb-5" style="color: var(--text-tertiary);">per month</p>
+                    <ul class="text-sm space-y-2 mb-6 text-left" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 250 orders/month</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Unlimited products</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> API access</li>
+                    </ul>
+                    <a href="#auth" class="btn-primary block text-center py-2.5 text-sm font-semibold no-underline mb-3">Start Trial</a>
+                    <div class="inline-block px-3 py-0.5 rounded-full text-xs font-bold" style="background: var(--brand); color: white;">Most Popular</div>
+                </div>
+
+                <!-- Business -->
+                <div class="feature-card text-center">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-tertiary);">Business</p>
+                    <p class="text-3xl font-bold mb-1" style="color: var(--text-primary);">$119</p>
+                    <p class="text-xs mb-5" style="color: var(--text-tertiary);">per month</p>
+                    <ul class="text-sm space-y-2 mb-6 text-left" style="color: var(--text-secondary); list-style: none; padding: 0; margin: 0;">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 1,000 orders/month</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> White-label branding</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Everything in Pro</li>
+                    </ul>
+                    <a href="#auth" class="block text-center py-2.5 text-sm font-semibold no-underline transition-all" style="background: var(--surface-2); color: var(--text-primary); clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);">Start Trial</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div id="faq" class="mb-20 animate-in delay-6">
+            <h2 class="font-display text-3xl text-center mb-10" style="color: var(--text-primary);">Frequently asked questions</h2>
+
+            <div class="max-w-2xl mx-auto space-y-3">
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        How does ETSAI work for my buyers?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        Your buyer clicks a link you send them (via Etsy messages, email, text — however you communicate). They see a friendly chat interface where an AI assistant asks them for the specs you need. It feels like texting a friend. No login required, no app to download. Takes under 2 minutes.
+                    </div>
+                </details>
+
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        What if a buyer gives multiple answers in one message?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        The AI handles it gracefully. If a buyer says "I want gold, size 7, with cursive font" — the AI extracts all three answers, confirms them, and moves on to whatever's still missing. It doesn't force buyers through a rigid checklist.
+                    </div>
+                </details>
+
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        Can I customize the questions for each product?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        Yes. When you add a product, the AI generates questions automatically — but you can edit, add, remove, or reorder them however you want. You can also set validation rules like character limits, required fields, and dropdown options.
+                    </div>
+                </details>
+
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        Does it work with my existing Etsy workflow?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        Perfectly. Connect your Etsy account to auto-import products and detect new orders. When someone buys, you just grab the intake link and paste it into Etsy messages. That's it. You can also import any listing by URL without connecting your account.
+                    </div>
+                </details>
+
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        What happens when a buyer is confused or wants to cancel?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        The AI detects frustration, confusion, and cancellation requests. It flags these conversations as "escalated" and sends you an email alert so you can step in personally. You always stay in control.
+                    </div>
+                </details>
+
+                <details class="feature-card group" style="padding: 0;">
+                    <summary class="flex items-center justify-between cursor-pointer px-6 py-4 text-sm font-medium" style="color: var(--text-primary); list-style: none;">
+                        Can I try it before paying?
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="px-6 pb-4 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                        Absolutely. Every account starts with a 14-day free trial — full access, no credit card required. Set up takes about 5 minutes. If you're doing custom orders on Etsy, you'll see the value on your very first order.
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- Auth Card -->
+        <div id="auth" class="auth-card max-w-md mx-auto animate-in delay-4">
+            <div class="p-8">
+                {% if session.get('referral_shop') %}
+                <div class="mb-4 px-4 py-3 rounded-xl text-center" style="background: var(--sage-bg);">
+                    <p class="text-xs font-medium" style="color: var(--brand);">Referred by {{ session.get('referral_shop') }}</p>
+                </div>
+                {% endif %}
+
+                <p class="text-center text-sm mb-6" style="color: var(--text-secondary);">Let's get you set up. Takes about 10 seconds.</p>
+
+                <div class="flex gap-6 mb-6 border-b justify-center" style="border-color: var(--border-default);">
+                    <button id="tab-signup" onclick="showTab('signup')" class="tab-active pb-3 text-sm font-semibold transition-colors cursor-pointer">Sign Up</button>
+                    <button id="tab-login" onclick="showTab('login')" class="tab-inactive pb-3 text-sm font-semibold transition-colors cursor-pointer">Log In</button>
+                </div>
+
+                <!-- Sign Up Form -->
+                <form id="form-signup" method="POST" action="/signup" class="space-y-3">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="shop_name" placeholder="Your shop name" required autocomplete="organization"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <input type="email" name="email" placeholder="Email address" required autocomplete="email"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <input type="password" name="password" placeholder="Password (min 8 characters)" required minlength="8" autocomplete="new-password"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <button type="submit" class="btn-primary w-full py-3 rounded-xl text-sm font-semibold">
+                        Create Free Account
+                    </button>
+                </form>
+
+                <!-- Login Form -->
+                <form id="form-login" method="POST" action="/login" class="space-y-3 hidden">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="email" name="email" placeholder="Email address" required autocomplete="email"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <input type="password" name="password" placeholder="Password" required autocomplete="current-password"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <button type="submit" class="btn-primary w-full py-3 text-sm font-semibold">
+                        Log In
+                    </button>
+                    <p class="text-center"><a href="/forgot-password" class="text-xs no-underline" style="color: var(--text-tertiary);">Forgot your password?</a></p>
+                </form>
+
+                <!-- Set Password Form (for legacy accounts) -->
+                {% if session.get('set_password_email') %}
+                <form id="form-setpw" method="POST" action="/set-password" class="space-y-3 mt-4 pt-4 border-t" style="border-color: var(--border-default);">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <p class="text-sm font-medium" style="color: var(--text-primary);">Set a password for {{ session.get('set_password_email') }}</p>
+                    <input type="hidden" name="email" value="{{ session.get('set_password_email') }}">
+                    <input type="password" name="password" placeholder="Choose a password (min 8 characters)" required minlength="8"
+                        class="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                        style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary);">
+                    <button type="submit" class="btn-primary w-full py-3 rounded-xl text-sm font-semibold">
+                        Set Password & Log In
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-20 pt-8 border-t animate-in delay-5" style="border-color: var(--border-default);">
+            <a href="/" class="flex items-center justify-center gap-1.5 text-lg font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <p class="text-xs mt-2 mb-2" style="color: var(--text-tertiary);">Your AI assistant for custom orders</p>
+            <div class="flex justify-center gap-4 mb-2">
+                <a href="/privacy" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Privacy</a>
+                <a href="/terms" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Terms</a>
+                <a href="/support" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Support</a>
+            </div>
+            <p class="text-xs" style="color: var(--text-tertiary);">Not affiliated with Etsy, Inc.</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        }
+        function showTab(tab) {
+            const isSignup = tab === 'signup';
+            document.getElementById('form-signup').classList.toggle('hidden', !isSignup);
+            document.getElementById('form-login').classList.toggle('hidden', isSignup);
+            document.getElementById('tab-signup').className = isSignup ? 'tab-active pb-3 text-sm font-semibold transition-colors cursor-pointer' : 'tab-inactive pb-3 text-sm font-semibold transition-colors cursor-pointer';
+            document.getElementById('tab-login').className = !isSignup ? 'tab-active pb-3 text-sm font-semibold transition-colors cursor-pointer' : 'tab-inactive pb-3 text-sm font-semibold transition-colors cursor-pointer';
+        }
+    </script>
+</body>
+</html>

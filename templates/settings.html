@@ -1,0 +1,479 @@
+{% extends "_base.html" %}
+
+{% block title %}Settings — ETSAI{% endblock %}
+
+{% block extra_styles %}
+    .settings-card {
+        background: var(--surface-0);
+        border: 1px solid var(--border-default);
+        border-radius: 0;
+        overflow: hidden;
+        position: relative;
+        z-index: 1;
+        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+    }
+    .settings-card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .settings-card-body {
+        padding: 1.5rem;
+    }
+    .settings-field label {
+        display: block; font-size: 0.875rem; font-weight: 500;
+        margin-bottom: 0.375rem; color: var(--text-primary);
+    }
+    .settings-field .hint {
+        font-size: 0.75rem; color: var(--text-tertiary);
+        margin-bottom: 0.5rem;
+    }
+    .settings-field input, .settings-field textarea {
+        width: 100%; padding: 0.75rem 1rem; border-radius: 12px;
+        font-size: 0.875rem; transition: all 0.2s;
+        background: var(--surface-2); border: 1px solid var(--border-default);
+        color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif;
+    }
+    .settings-field textarea { resize: vertical; }
+    .toggle-switch {
+        position: relative; display: inline-block;
+        width: 44px; height: 24px; cursor: pointer;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+        position: absolute; inset: 0; border-radius: 12px;
+        background: var(--surface-3); transition: all 0.3s;
+    }
+    .toggle-slider:before {
+        content: ''; position: absolute; height: 18px; width: 18px;
+        left: 3px; bottom: 3px; background: white; border-radius: 50%;
+        transition: all 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background: #4a6741;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+    .danger-zone {
+        border: 1px solid rgba(220,38,38,0.3);
+        border-radius: 0; overflow: hidden;
+        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+    }
+    .danger-zone .settings-card-header {
+        background: rgba(220,38,38,0.05);
+        border-bottom-color: rgba(220,38,38,0.15);
+    }
+    html.dark .danger-zone {
+        border-color: rgba(220,38,38,0.4);
+    }
+    html.dark .danger-zone .settings-card-header {
+        background: rgba(220,38,38,0.08);
+    }
+{% endblock %}
+
+{% block body %}
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="p-5 pb-3">
+            <a href="/dashboard" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        </div>
+        <nav class="flex-1 py-2">
+            <a href="/dashboard" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                Dashboard
+            </a>
+            <a href="/products/add" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                Products
+            </a>
+            <a href="/settings" class="sidebar-nav-item active">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Settings
+            </a>
+        </nav>
+        <div class="p-4 border-t" style="border-color: var(--border-default);">
+            <button onclick="toggleDarkMode()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors" style="color: var(--text-tertiary); background: transparent;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+                <svg class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <span class="hidden dark:inline">Light mode</span>
+                <span class="inline dark:hidden">Dark mode</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <!-- Mobile header -->
+        <div class="md:hidden flex items-center justify-between px-4 py-3 border-b" style="background: var(--surface-0); border-color: var(--border-default);">
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+            </button>
+            <span class="flex items-center gap-1 text-sm font-bold"><svg class="w-4 h-4" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+            <div class="w-9"></div>
+        </div>
+
+        <div class="max-w-2xl mx-auto px-6 py-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <div class="flash {{ category }} px-4 py-3 mb-5">{{ message }}</div>
+            {% endfor %}
+            {% endwith %}
+
+            <div class="mb-6 animate-in">
+                <h1 class="text-2xl font-display mb-1" style="color: var(--text-primary);">Settings</h1>
+                <p class="text-sm" style="color: var(--text-tertiary);">Manage your account, billing, and preferences.</p>
+            </div>
+
+            <!-- Plan & Billing -->
+            <div class="settings-card mb-6 animate-in">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Plan & Billing</h2>
+                </div>
+                <div class="settings-card-body">
+                    <!-- Current plan badge -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--text-primary);">Current plan</p>
+                            <p class="text-lg font-bold" style="color: var(--brand);">
+                                {{ usage.plan_name }}
+                                {% if usage.is_free %}
+                                    {% if usage.trial_active %}
+                                        <span class="text-xs font-normal px-2 py-0.5 rounded-full" style="background: var(--brand-bg); color: var(--brand);">{{ usage.trial_days_left }} days left</span>
+                                    {% else %}
+                                        <span class="text-xs font-normal px-2 py-0.5 rounded-full" style="background: rgba(220,38,38,0.08); color: #dc2626;">Trial ended</span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if not usage.is_free and seller.stripe_customer_id %}
+                        <form method="POST" action="/billing/portal">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-secondary text-xs py-2 px-4">Manage Billing</button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    <!-- Usage bars -->
+                    <div class="space-y-3 mb-5">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span style="color: var(--text-secondary);">Orders this month</span>
+                                <span style="color: var(--text-tertiary);">{{ usage.orders_used }} / {{ usage.orders_limit }}</span>
+                            </div>
+                            <div class="h-2 rounded-full overflow-hidden" style="background: var(--surface-2);">
+                                <div class="h-full rounded-full transition-all" style="width: {{ usage.orders_pct }}%; background: {% if usage.orders_pct >= 90 %}#dc2626{% elif usage.orders_pct >= 70 %}#d97706{% else %}var(--brand){% endif %};"></div>
+                            </div>
+                            <p class="text-xs mt-0.5" style="color: var(--text-tertiary);">{{ usage.orders_pct }}% used{% if usage.orders_pct >= 90 %} — almost at limit{% elif usage.orders_pct >= 70 %} — approaching limit{% endif %}</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span style="color: var(--text-secondary);">Products</span>
+                                <span style="color: var(--text-tertiary);">{{ usage.products_used }} / {% if usage.products_unlimited %}Unlimited{% else %}{{ usage.products_limit }}{% endif %}</span>
+                            </div>
+                            {% if not usage.products_unlimited %}
+                            <div class="h-2 rounded-full overflow-hidden" style="background: var(--surface-2);">
+                                <div class="h-full rounded-full transition-all" style="width: {{ (usage.products_used / usage.products_limit * 100)|int if usage.products_limit > 0 else 0 }}%; background: var(--brand);"></div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Plan comparison / upgrade -->
+                    {% if usage.is_free or usage.plan_key == 'starter' %}
+                    <div class="pt-4 border-t" style="border-color: var(--border-subtle);">
+                        <p class="text-xs font-semibold mb-3" style="color: var(--text-secondary);">Upgrade your plan</p>
+                        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                            {% for key, plan in plans.items() %}
+                            {% if plan.price > 0 and key != usage.plan_key %}
+                            <form method="POST" action="/billing/checkout">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="plan" value="{{ key }}">
+                                <button type="submit" class="w-full p-3 rounded-xl text-left transition-all" style="background: var(--surface-2); border: 1px solid var(--border-default);" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-default)'">
+                                    <p class="text-sm font-bold" style="color: var(--text-primary);">{{ plan.name }}</p>
+                                    <p class="text-lg font-bold" style="color: var(--brand);">${{ plan.price }}<span class="text-xs font-normal" style="color: var(--text-tertiary);">/mo</span></p>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);">{{ plan.orders_per_month }} orders/mo</p>
+                                    {% if plan.white_label %}<p class="text-xs" style="color: var(--brand);">+ White-label</p>{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Profile -->
+            <form method="POST" action="/settings" class="settings-card mb-6 animate-in delay-1">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="profile">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Profile</h2>
+                </div>
+                <div class="settings-card-body space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="settings-field">
+                            <label>Your Name</label>
+                            <p class="hint">Used in dashboard greetings</p>
+                            <input type="text" name="display_name" value="{{ seller.display_name or '' }}" placeholder="e.g. Noah">
+                        </div>
+                        <div class="settings-field">
+                            <label>Shop Name</label>
+                            <p class="hint">Your business name</p>
+                            <input type="text" name="shop_name" value="{{ seller.shop_name }}" required>
+                        </div>
+                    </div>
+                    <div class="settings-field">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{ seller.email }}" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="settings-field">
+                            <label>Phone</label>
+                            <input type="tel" name="phone" value="{{ seller.phone or '' }}" placeholder="(555) 123-4567">
+                        </div>
+                        <div class="settings-field">
+                            <label>Website</label>
+                            <input type="url" name="website" value="{{ seller.website or '' }}" placeholder="https://yoursite.com">
+                        </div>
+                    </div>
+                    <div class="settings-field">
+                        <label>Timezone</label>
+                        <select name="timezone" class="w-full px-3 py-2.5 rounded-lg text-sm" style="background: var(--surface-2); border: 1px solid var(--border-default); color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif;">
+                            <option value="">Select timezone</option>
+                            {% for tz in ['US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific', 'US/Alaska', 'US/Hawaii', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney', 'Pacific/Auckland'] %}
+                            <option value="{{ tz }}" {{ 'selected' if seller.timezone == tz }}>{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Save Profile</button>
+                </div>
+            </form>
+
+            <!-- Change Password -->
+            <form method="POST" action="/settings" class="settings-card mb-6 animate-in delay-2">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="change_password">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Change Password</h2>
+                </div>
+                <div class="settings-card-body space-y-4">
+                    <div class="settings-field">
+                        <label>Current Password</label>
+                        <input type="password" name="current_password" required autocomplete="current-password">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="settings-field">
+                            <label>New Password</label>
+                            <input type="password" name="new_password" required minlength="8" placeholder="Min. 8 characters" autocomplete="new-password">
+                        </div>
+                        <div class="settings-field">
+                            <label>Confirm New Password</label>
+                            <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Change Password</button>
+                </div>
+            </form>
+
+            <!-- Notifications -->
+            <form method="POST" action="/settings" class="settings-card mb-6 animate-in delay-3">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="notifications">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Notifications</h2>
+                </div>
+                <div class="settings-card-body space-y-5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--text-primary);">Completion emails</p>
+                            <p class="text-xs" style="color: var(--text-tertiary);">Get emailed when a buyer finishes their specs</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="email_on_complete" value="1" {{ 'checked' if settings.get('email_on_complete', true) }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--text-primary);">Escalation emails</p>
+                            <p class="text-xs" style="color: var(--text-tertiary);">Get emailed when an order is escalated</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="email_on_escalation" value="1" {{ 'checked' if settings.get('email_on_escalation', true) }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary">Save Notifications</button>
+                </div>
+            </form>
+
+            <!-- Default Notes -->
+            <form method="POST" action="/settings" class="settings-card mb-6 animate-in delay-4">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="default_notes">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Default Seller Notes</h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="settings-field">
+                        <p class="hint">These notes will be pre-filled when you add a new product.</p>
+                        <textarea name="default_notes" rows="4" placeholder="e.g. We can do custom fonts but not images. Gold and silver only. Turnaround is 3-5 days.">{{ settings.get('default_notes', '') }}</textarea>
+                    </div>
+                    <button type="submit" class="btn-primary mt-3">Save Default Notes</button>
+                </div>
+            </form>
+
+            <!-- Referral Program -->
+            <div class="settings-card mb-6 animate-in delay-5">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Referral Program</h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="p-4 rounded-xl mb-4" style="background: var(--sage-bg);">
+                        <p class="text-sm font-medium mb-1" style="color: var(--brand);">Refer a seller, earn 30 free days</p>
+                        <p class="text-xs" style="color: var(--text-secondary);">Share your link. When someone signs up and becomes a paying customer, you get 30 extra days added to your trial — stackable, up to 6 months max.</p>
+                    </div>
+
+                    <!-- Referral link -->
+                    <div class="settings-field mb-4">
+                        <label>Your referral link</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="referral-link" value="{{ request.host_url.rstrip('/') }}/refer/{{ seller.referral_code }}" readonly style="background: var(--surface-1); cursor: text; flex: 1;">
+                            <button type="button" onclick="copyReferralLink()" class="btn-secondary text-xs py-2.5 px-4 whitespace-nowrap" id="copy-referral-btn">Copy Link</button>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex items-center gap-6 mb-4">
+                        <div>
+                            <p class="text-2xl font-bold" style="color: var(--brand);">{{ referral_count }}</p>
+                            <p class="text-xs" style="color: var(--text-tertiary);">Referral{{ 's' if referral_count != 1 else '' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold" style="color: var(--brand);">{{ referral_count * 30 }}</p>
+                            <p class="text-xs" style="color: var(--text-tertiary);">Days earned</p>
+                        </div>
+                    </div>
+
+                    {% if referrals %}
+                    <!-- Referred sellers list -->
+                    <div class="border-t pt-3" style="border-color: var(--border-subtle);">
+                        <p class="text-xs font-semibold mb-2" style="color: var(--text-secondary);">Your referrals</p>
+                        <div class="space-y-2">
+                            {% for ref in referrals %}
+                            <div class="flex items-center justify-between py-1.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style="background: var(--sage-bg); color: var(--brand);">{{ ref.shop_name[0]|upper }}</div>
+                                    <span class="text-sm" style="color: var(--text-primary);">{{ ref.shop_name }}</span>
+                                </div>
+                                <span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--surface-2); color: var(--text-tertiary);">{{ ref.plan or 'free' }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Regenerate code -->
+                    <div class="border-t pt-3 mt-3" style="border-color: var(--border-subtle);">
+                        <form method="POST" action="/settings" class="inline">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="regenerate_referral">
+                            <button type="submit" class="text-xs underline cursor-pointer" style="color: var(--text-tertiary); background: none; border: none;" onclick="return confirm('This will invalidate your current referral link. Continue?')">Regenerate referral code</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branding (Business plan only) -->
+            {% if usage.white_label %}
+            <form method="POST" action="/settings" class="settings-card mb-6 animate-in delay-5">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="branding">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">White-Label Branding</h2>
+                </div>
+                <div class="settings-card-body space-y-4">
+                    <p class="text-xs" style="color: var(--text-tertiary);">Customize the buyer intake page. Your branding replaces the ETSAI logo and colors.</p>
+                    <div class="settings-field">
+                        <label>Brand Color</label>
+                        <p class="hint">Hex color for buttons and accents on the intake page (e.g. #4a6741)</p>
+                        <div class="flex items-center gap-3">
+                            <input type="color" name="brand_color" value="{{ seller.brand_color or '#4a6741' }}" style="width: 48px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-default); cursor: pointer;">
+                            <input type="text" name="brand_color_text" value="{{ seller.brand_color or '' }}" placeholder="#4a6741" maxlength="7" style="width: 100px;" oninput="this.form.brand_color.value = this.value">
+                        </div>
+                    </div>
+                    <div class="settings-field">
+                        <label>Logo URL</label>
+                        <p class="hint">Direct link to your logo image (PNG or SVG recommended, 200px wide max)</p>
+                        <input type="url" name="brand_logo_url" value="{{ seller.brand_logo_url or '' }}" placeholder="https://yoursite.com/logo.png">
+                    </div>
+                    {% if seller.brand_color or seller.brand_logo_url %}
+                    <div class="p-3 rounded-xl" style="background: var(--surface-2);">
+                        <p class="text-xs font-medium mb-2" style="color: var(--text-secondary);">Preview</p>
+                        <div class="flex items-center gap-2">
+                            {% if seller.brand_logo_url %}
+                            <img src="{{ seller.brand_logo_url }}" alt="Logo" style="max-height: 24px; max-width: 120px;" onerror="this.style.display='none'">
+                            {% endif %}
+                            <span class="text-sm font-bold" style="color: {{ seller.brand_color or 'var(--brand)' }};">{{ seller.shop_name }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn-primary">Save Branding</button>
+                </div>
+            </form>
+            {% endif %}
+
+            <!-- Danger Zone -->
+            <div class="danger-zone animate-in delay-6">
+                <div class="settings-card-header">
+                    <h2 class="text-base font-semibold text-center" style="color: #dc2626;">Danger Zone</h2>
+                </div>
+                <div class="settings-card-body">
+                    <p class="text-sm mb-4" style="color: var(--text-secondary);">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                    <form method="POST" action="/settings" onsubmit="return confirm('Are you sure you want to delete your account? This will permanently delete all your products, orders, and data. This cannot be undone.');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="delete_account">
+                        <button type="submit" class="px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer" style="background: rgba(220,38,38,0.1); color: #dc2626;">
+                            Delete Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+// Password match validation
+document.querySelectorAll('form').forEach(function(form) {
+    if (form.querySelector('[name="confirm_password"]')) {
+        form.addEventListener('submit', function(e) {
+            const newPw = form.querySelector('[name="new_password"]').value;
+            const confirmPw = form.querySelector('[name="confirm_password"]').value;
+            if (newPw && confirmPw && newPw !== confirmPw) {
+                e.preventDefault();
+                alert('New passwords do not match.');
+            }
+        });
+    }
+});
+
+// Copy referral link
+function copyReferralLink() {
+    var input = document.getElementById('referral-link');
+    var btn = document.getElementById('copy-referral-btn');
+    if (!input) return;
+    navigator.clipboard.writeText(input.value).then(function() {
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy Link'; }, 2000);
+    }).catch(function() {
+        input.select();
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy Link'; }, 2000);
+    });
+}
+{% endblock %}

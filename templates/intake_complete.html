@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Complete — {{ order.shop_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          display: ['DM Serif Display', 'Georgia', 'serif'],
+        }}}
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff;
+            --surface-1: #faf8f5;
+            --surface-2: #f2ede7;
+            --text-primary: #2c1810;
+            --text-secondary: #78716c;
+            --text-tertiary: #a8a29e;
+            --brand: #4a6741;
+            --sage: #7a8c6e;
+            --sage-bg: rgba(122, 140, 110, 0.1);
+        }
+        html.dark {
+            --surface-0: #1c1917;
+            --surface-1: #171412;
+            --surface-2: #292524;
+            --text-primary: #ede6df;
+            --text-secondary: #b5a898;
+            --text-tertiary: #78716c;
+            --brand: #6b9460;
+            --sage: #8fa382;
+            --sage-bg: rgba(143, 163, 130, 0.12);
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--surface-1); color: var(--text-primary);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; padding: 20px; margin: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes circleGrow {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .complete-card {
+            background: var(--surface-0); border-radius: 24px; padding: 48px 40px;
+            max-width: 420px; width: 100%; text-align: center;
+            box-shadow: 0 4px 24px rgba(44, 24, 16, 0.06);
+            animation: scaleIn 0.5s ease forwards;
+            position: relative;
+        }
+        html.dark .complete-card { box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+
+        .check-circle {
+            width: 72px; height: 72px; margin: 0 auto 24px;
+            animation: circleGrow 0.4s ease forwards;
+        }
+        .check-bg { fill: var(--sage-bg); animation: circleGrow 0.3s ease forwards; }
+        .check-circle circle:not(.check-bg) {
+            fill: none; stroke: var(--sage); stroke-width: 2;
+        }
+        .check-circle .check {
+            stroke: var(--sage); stroke-width: 2.5; fill: none;
+            stroke-linecap: round; stroke-linejoin: round;
+            stroke-dasharray: 24; stroke-dashoffset: 24;
+            animation: drawCheck 0.4s ease forwards 0.4s;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', Georgia, serif;
+            font-size: 1.625rem; font-weight: 400; margin-bottom: 8px;
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.6s;
+        }
+        .desc {
+            font-size: 0.9375rem; line-height: 1.6;
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.7s;
+            color: var(--text-secondary);
+        }
+        .product-pill {
+            display: inline-block; font-size: 0.75rem; padding: 4px 14px;
+            border-radius: 100px; margin-top: 20px;
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.8s;
+            background: var(--surface-2); color: var(--text-tertiary);
+        }
+
+        .glow {
+            position: fixed; width: 300px; height: 300px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(122,140,110,0.1) 0%, transparent 70%);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: -1;
+        }
+        html.dark .glow { background: radial-gradient(circle, rgba(143,163,130,0.15) 0%, transparent 70%); }
+
+        .confetti-piece {
+            position: fixed; top: -20px; z-index: 100;
+            opacity: 0; pointer-events: none;
+        }
+        .confetti-piece.active { animation: confettiFall 3s ease-out forwards; }
+
+        .branding {
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.9s;
+            margin-top: 28px;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand), #5c7d52, #7a9b6f);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        {% if brand_color %}
+        :root {
+            --brand: {{ brand_color }};
+            --sage: {{ brand_color }};
+            --sage-bg: {{ brand_color }}18;
+        }
+        {% endif %}
+    </style>
+</head>
+<body>
+    <div class="glow"></div>
+    <div id="confetti-container"></div>
+
+    <div class="complete-card">
+        <svg class="check-circle" viewBox="0 0 72 72">
+            <circle class="check-bg" cx="36" cy="36" r="34"/>
+            <circle cx="36" cy="36" r="34" stroke-dasharray="214" stroke-dashoffset="0"/>
+            <path class="check" d="M22 36 L32 46 L50 28"/>
+        </svg>
+        <h1 class="title">Your details are in great hands.</h1>
+        <p class="desc">{{ order.shop_name }} has everything they need to get started on your order.</p>
+        <span class="product-pill">{{ order.product_title }}</span>
+        {% if not white_label %}
+        <div class="branding">
+            <span class="text-xs" style="color: var(--text-tertiary);">Powered by </span>
+            <span class="inline-flex items-center gap-1 text-xs font-bold"><svg class="w-3.5 h-3.5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+        </div>
+        {% elif brand_logo_url %}
+        <div class="branding">
+            <img src="{{ brand_logo_url }}" alt="{{ order.shop_name }}" style="max-height: 20px; max-width: 100px; margin: 0 auto;">
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Launch confetti on load
+        (function() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const container = document.getElementById('confetti-container');
+            const colors = ['#4a6741', '#5c7d52', '#7a9b6f', '#7a8c6e', '#8fa382', '#d97706', '#f59e0b'];
+            for (let i = 0; i < 50; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 2 + 's';
+                piece.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.width = (6 + Math.random() * 8) + 'px';
+                piece.style.height = (8 + Math.random() * 12) + 'px';
+                container.appendChild(piece);
+                requestAnimationFrame(() => piece.classList.add('active'));
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — ETSAI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] } } }
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff; --surface-1: #faf8f5; --surface-2: #f2ede7;
+            --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e;
+            --border-default: #e6dfd6;
+            --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f;
+        }
+        html.dark {
+            --surface-0: #1c1917; --surface-1: #171412; --surface-2: #292524;
+            --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c;
+            --border-default: #3b3532;
+            --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e;
+        }
+        body { background: var(--surface-1); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .content h2 { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin: 2rem 0 0.75rem; }
+        .content h3 { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 1.5rem 0 0.5rem; }
+        .content p, .content li { font-size: 0.9375rem; line-height: 1.7; color: var(--text-secondary); }
+        .content ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+    <nav class="border-b" style="background: var(--surface-0); border-color: var(--border-default);">
+        <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <a href="/" class="text-sm no-underline" style="color: var(--text-tertiary);">Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto px-6 py-12 content">
+        <h1 class="font-display text-3xl mb-2" style="color: var(--text-primary);">Privacy Policy</h1>
+        <p class="text-sm mb-8" style="color: var(--text-tertiary);">Last updated: February 2026</p>
+
+        <h2>1. Information We Collect</h2>
+        <h3>Account Information</h3>
+        <p>When you create an account, we collect your email address and shop name.</p>
+
+        <h3>Order Data</h3>
+        <p>We store product descriptions, intake questions, buyer responses, and conversation history to provide our spec collection service.</p>
+
+        <h3>Usage Data</h3>
+        <p>We collect basic analytics about how you use the service to improve it.</p>
+
+        <h2>2. How We Use Your Information</h2>
+        <ul>
+            <li>To provide and maintain the ETSAI service</li>
+            <li>To process buyer intake conversations using AI</li>
+            <li>To send email notifications you've opted into (completion, escalation)</li>
+            <li>To improve and develop new features</li>
+        </ul>
+
+        <h2>3. Third-Party Services</h2>
+        <h3>Anthropic (Claude AI)</h3>
+        <p>Buyer conversations are processed by Claude AI (Anthropic) to collect order specifications. Your data is processed under Anthropic's API terms and is not used to train their models.</p>
+
+        <h3>Etsy API</h3>
+        <p>If you connect your Etsy shop, we access your shop listings and orders via the Etsy API under their terms of service. We store OAuth tokens securely and only access data necessary for the service.</p>
+
+        <h2>4. Data Sharing</h2>
+        <p>We do not sell your personal data. We share data only with the third-party services listed above, as necessary to provide the service.</p>
+
+        <h2>5. Data Retention</h2>
+        <p>We retain your data as long as your account is active. You can delete your account and all associated data at any time from the Settings page.</p>
+
+        <h2>6. Your Rights (GDPR/CCPA)</h2>
+        <ul>
+            <li><strong>Access:</strong> You can view all your data in the dashboard</li>
+            <li><strong>Export:</strong> You can copy or download specs for any order</li>
+            <li><strong>Deletion:</strong> You can delete your account and all data from Settings</li>
+            <li><strong>Opt-out:</strong> You can disable email notifications at any time</li>
+        </ul>
+
+        <h2>7. Security</h2>
+        <p>We use industry-standard security measures including encrypted connections (HTTPS), secure token storage, and WAL-mode database operations.</p>
+
+        <h2>8. Contact</h2>
+        <p>For privacy questions, contact us at <a href="mailto:privacy@etsai.com" style="color: var(--brand); text-decoration: none;">privacy@etsai.com</a>.</p>
+    </div>
+
+    <footer class="text-center py-8 border-t" style="border-color: var(--border-default);">
+        <a href="/" class="inline-flex items-center gap-1.5 text-lg font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        <p class="text-xs mt-2" style="color: var(--text-tertiary);">Not affiliated with Etsy, Inc.</p>
+    </footer>
+</body>
+</html>

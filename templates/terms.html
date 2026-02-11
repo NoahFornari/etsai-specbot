@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service — ETSAI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] } } }
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff; --surface-1: #faf8f5; --surface-2: #f2ede7;
+            --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e;
+            --border-default: #e6dfd6;
+            --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f;
+        }
+        html.dark {
+            --surface-0: #1c1917; --surface-1: #171412; --surface-2: #292524;
+            --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c;
+            --border-default: #3b3532;
+            --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e;
+        }
+        body { background: var(--surface-1); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .content h2 { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin: 2rem 0 0.75rem; }
+        .content p, .content li { font-size: 0.9375rem; line-height: 1.7; color: var(--text-secondary); }
+        .content ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+    <nav class="border-b" style="background: var(--surface-0); border-color: var(--border-default);">
+        <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <a href="/" class="text-sm no-underline" style="color: var(--text-tertiary);">Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto px-6 py-12 content">
+        <h1 class="font-display text-3xl mb-2" style="color: var(--text-primary);">Terms of Service</h1>
+        <p class="text-sm mb-8" style="color: var(--text-tertiary);">Last updated: February 2026</p>
+
+        <h2>1. Service Description</h2>
+        <p>ETSAI provides an AI-powered spec collection tool for custom order sellers. Sellers create products with intake questions, and buyers provide their customization details through a conversational AI interface.</p>
+
+        <h2>2. Account Terms</h2>
+        <ul>
+            <li>You must provide accurate information when creating an account</li>
+            <li>You are responsible for all activity under your account</li>
+            <li>You must be at least 18 years old to use the service</li>
+            <li>One account per person or business entity</li>
+        </ul>
+
+        <h2>3. Acceptable Use</h2>
+        <p>You agree not to:</p>
+        <ul>
+            <li>Use the service for any unlawful purpose</li>
+            <li>Collect information that violates others' privacy</li>
+            <li>Abuse or attempt to manipulate the AI system</li>
+            <li>Exceed the usage limits of your plan</li>
+        </ul>
+
+        <h2>4. Intellectual Property</h2>
+        <p>You retain ownership of all content you create (product descriptions, questions, etc.). We retain rights to the ETSAI platform, branding, and underlying technology.</p>
+
+        <h2>5. AI-Generated Content</h2>
+        <p>ETSAI uses AI (Claude by Anthropic) to generate intake questions and manage conversations. While we strive for accuracy, AI-generated content may contain errors. You should review AI-generated questions before using them with buyers.</p>
+
+        <h2>6. Limitation of Liability</h2>
+        <p>ETSAI is provided "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the service. Our total liability is limited to the amount you paid us in the 12 months prior to the claim.</p>
+
+        <h2>7. Termination</h2>
+        <p>You can delete your account at any time from the Settings page. We may suspend or terminate accounts that violate these terms. Upon termination, your data will be permanently deleted.</p>
+
+        <h2>8. Changes to Terms</h2>
+        <p>We may update these terms from time to time. We'll notify you of material changes via email. Continued use after changes constitutes acceptance.</p>
+
+        <h2>9. Contact</h2>
+        <p>For questions about these terms, contact us at <a href="mailto:legal@etsai.com" style="color: var(--brand); text-decoration: none;">legal@etsai.com</a>.</p>
+    </div>
+
+    <footer class="text-center py-8 border-t" style="border-color: var(--border-default);">
+        <a href="/" class="inline-flex items-center gap-1.5 text-lg font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        <p class="text-xs mt-2" style="color: var(--text-tertiary);">Not affiliated with Etsy, Inc.</p>
+    </footer>
+</body>
+</html>

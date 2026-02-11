@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support — ETSAI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] } } }
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff; --surface-1: #faf8f5; --surface-2: #f2ede7;
+            --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e;
+            --border-default: #e6dfd6;
+            --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f;
+        }
+        html.dark {
+            --surface-0: #1c1917; --surface-1: #171412; --surface-2: #292524;
+            --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c;
+            --border-default: #3b3532;
+            --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e;
+        }
+        body { background: var(--surface-1); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .faq-item { border: 1px solid var(--border-default); border-radius: 14px; overflow: hidden; transition: all 0.2s; }
+        .faq-item:hover { box-shadow: 0 2px 8px rgba(44,24,16,0.04); }
+        html.dark .faq-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .faq-toggle { width: 100%; text-align: left; padding: 1rem 1.25rem; background: var(--surface-0); border: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .faq-toggle:hover { background: var(--surface-2); }
+        .faq-body { padding: 0 1.25rem 1rem; display: none; }
+        .faq-body.open { display: block; }
+        .faq-chevron { transition: transform 0.2s; flex-shrink: 0; }
+        .faq-chevron.open { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+    <nav class="border-b" style="background: var(--surface-0); border-color: var(--border-default);">
+        <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <a href="/" class="text-sm no-underline" style="color: var(--text-tertiary);">Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto px-6 py-12">
+        <div class="text-center mb-12">
+            <h1 class="font-display text-3xl mb-3" style="color: var(--text-primary);">How can we help?</h1>
+            <p class="text-sm" style="color: var(--text-secondary);">Check our FAQ below or reach out directly.</p>
+            <a href="mailto:support@etsai.com" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 rounded-xl text-sm font-semibold no-underline transition-all" style="background: linear-gradient(135deg, #4a6741, #5c7d52); color: white; box-shadow: 0 2px 8px rgba(74,103,65,0.25);">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                Email support@etsai.com
+            </a>
+        </div>
+
+        <h2 class="text-lg font-semibold mb-4" style="color: var(--text-primary);">Frequently Asked Questions</h2>
+
+        <div class="space-y-3">
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">How does ETSAI work?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">You add your custom products and our AI generates the right intake questions. After a sale, you share a link with your buyer. They chat with a friendly AI that collects all their customization details. You get a complete spec sheet.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">Can I edit the AI-generated questions?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Yes! After the AI generates questions, you can edit, reorder, add, or remove any of them from the product detail page. You have full control over what gets asked.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">How does the Etsy integration work?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Connect your Etsy shop via OAuth. Then import your listings as products (AI generates questions for each). Use "Check Orders" to detect new purchases and auto-create intake orders. Send the intake link to your buyer via Etsy messages.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">Is my data secure?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Yes. We use HTTPS for all connections, store tokens securely, and conversations are processed via Anthropic's Claude API which does not use your data for training. You can delete your account and all data at any time.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">What happens if the AI can't handle a buyer's request?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">If a buyer asks something outside the AI's scope, the order gets escalated. You'll see an "Escalated" badge on your dashboard and receive an email notification so you can follow up directly with the buyer.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">What does the free plan include?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">The free plan includes a 14-day trial with up to 10 orders per month, 3 products, AI question generation, Etsy integration, email notifications, and all dashboard features. No credit card required.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-toggle" onclick="toggleFaq(this)">
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">Can I import products without Etsy?</span>
+                    <svg class="w-4 h-4 faq-chevron" style="color: var(--text-tertiary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="faq-body">
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">Yes! You can add products manually, import a single Etsy listing URL, or import an entire Etsy shop by URL — no API connection required. The AI generates intake questions from whatever product info you provide.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-8 border-t" style="border-color: var(--border-default);">
+        <a href="/" class="inline-flex items-center gap-1.5 text-lg font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        <p class="text-xs mt-2" style="color: var(--text-tertiary);">Not affiliated with Etsy, Inc.</p>
+    </footer>
+
+    <script>
+        function toggleFaq(btn) {
+            const body = btn.nextElementSibling;
+            const chevron = btn.querySelector('.faq-chevron');
+            body.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

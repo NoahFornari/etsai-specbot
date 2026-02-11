@@ -1,0 +1,366 @@
+{% extends "_base.html" %}
+
+{% block title %}Order #{{ order.id[:6] }} — ETSAI{% endblock %}
+
+{% block extra_styles %}
+    .msg { max-width: 85%; padding: 10px 14px; font-size: 0.875rem; line-height: 1.5; word-wrap: break-word; }
+    .msg-bot {
+        background: var(--surface-2); border-radius: 18px 18px 18px 4px;
+        align-self: flex-start; color: var(--text-primary);
+    }
+    .msg-buyer {
+        background: linear-gradient(135deg, #4a6741, #5c7d52); color: white;
+        border-radius: 18px 18px 4px 18px; align-self: flex-end;
+    }
+    html.dark .msg-buyer {
+        background: linear-gradient(135deg, #3d5a37, #4a6741);
+    }
+    .progress-ring-bg { stroke: var(--surface-3); }
+    .progress-ring-fill {
+        stroke: var(--brand);
+        transition: stroke-dashoffset 0.6s ease;
+        transform: rotate(-90deg); transform-origin: center;
+    }
+    .copy-card {
+        background: linear-gradient(135deg, rgba(74,103,65,0.05), rgba(217,119,6,0.03));
+        border: 1px dashed var(--brand-light);
+        border-radius: 14px;
+        transition: all 0.2s;
+    }
+    .copy-card:hover { border-style: solid; }
+    html.dark .copy-card {
+        background: linear-gradient(135deg, rgba(107,148,96,0.08), rgba(245,158,11,0.04));
+        border-color: rgba(107,148,96,0.3);
+    }
+    .spec-row {
+        border-left: 3px solid transparent;
+        padding: 0.75rem 1rem;
+        border-radius: 0 10px 10px 0;
+        transition: all 0.15s;
+    }
+    .spec-row:hover { background: var(--surface-2); }
+    .spec-row.filled { border-left-color: var(--sage); }
+    .spec-row.waiting { border-left-color: #d97706; }
+    .spec-row.optional-empty { border-left-color: var(--surface-3); }
+    .export-btn {
+        padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.8125rem;
+        font-weight: 600; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 0.375rem;
+    }
+    .notes-textarea {
+        width: 100%; min-height: 80px; padding: 0.75rem; border-radius: 10px;
+        font-size: 0.875rem; resize: vertical; transition: border-color 0.2s;
+        background: var(--surface-2); border: 1px solid var(--border-default);
+        color: var(--text-primary); font-family: inherit;
+    }
+    .escalation-banner {
+        background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.2);
+        border-radius: 12px; padding: 0.75rem 1rem;
+        display: flex; align-items: center; gap: 0.75rem;
+    }
+    html.dark .escalation-banner {
+        background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.25);
+    }
+    .fulfillment-select {
+        padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 10px; font-size: 0.8125rem;
+        font-weight: 600; cursor: pointer; appearance: none;
+        background: var(--surface-2) url("data:image/svg+xml,%3Csvg fill='none' viewBox='0 0 24 24' stroke='%2378716c' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E") no-repeat right 0.5rem center/1rem;
+        border: 1px solid var(--border-default); color: var(--text-primary);
+    }
+{% endblock %}
+
+{% block body %}
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="p-5 pb-3">
+            <a href="/dashboard" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        </div>
+        <nav class="flex-1 py-2">
+            <a href="/dashboard" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                Dashboard
+            </a>
+            <a href="/products/add" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                Products
+            </a>
+            <a href="/settings" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Settings
+            </a>
+        </nav>
+        <div class="p-4 border-t" style="border-color: var(--border-default);">
+            <button onclick="toggleDarkMode()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors" style="color: var(--text-tertiary); background: transparent;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+                <svg class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <span class="hidden dark:inline">Light mode</span>
+                <span class="inline dark:hidden">Dark mode</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <!-- Mobile header -->
+        <div class="md:hidden flex items-center justify-between px-4 py-3 border-b" style="background: var(--surface-0); border-color: var(--border-default);">
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+            </button>
+            <span class="flex items-center gap-1 text-sm font-bold"><svg class="w-4 h-4" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+            <div class="w-9"></div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-6 py-8">
+            <!-- Header -->
+            <div class="mb-6 animate-in">
+                <div class="flex flex-wrap items-center gap-3 mb-2">
+                    <h1 class="text-2xl font-display" style="color: var(--text-primary);">Order <span class="font-mono text-xl">#{{ order.id[:6] }}</span></h1>
+                    {% if order.specs_complete %}
+                    <span class="badge badge-success">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        Complete
+                    </span>
+                    {% else %}
+                    <span class="badge badge-warning">
+                        <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+                        Awaiting Buyer
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-sm" style="color: var(--text-secondary);">
+                    <span>{{ order.product_title }}</span>
+                    <span style="color: var(--text-tertiary);">·</span>
+                    <span>{{ order.buyer_name or order.buyer_email or 'Unknown buyer' }}</span>
+                </div>
+            </div>
+
+            {% if order.escalated %}
+            <div class="escalation-banner mb-6 animate-in">
+                <svg class="w-5 h-5 shrink-0" style="color: #dc2626;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                <div>
+                    <p class="text-sm font-semibold" style="color: #dc2626;">This order has been escalated</p>
+                    <p class="text-xs" style="color: var(--text-secondary);">A buyer message triggered escalation. Review the conversation and follow up directly.</p>
+                    <a href="https://www.etsy.com/your/orders" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold no-underline mt-1 inline-block" style="color: #dc2626;">Reply via Etsy Messages &rarr;</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Specs Column -->
+                <div class="space-y-6">
+                    <!-- Progress + Specs Card -->
+                    <div class="card animate-in delay-1">
+                        <div class="px-5 py-4 border-b relative flex items-center justify-center gap-4" style="border-color: var(--border-subtle);">
+                            <!-- SVG Progress Ring -->
+                            <div class="absolute left-5" style="width: 56px; height: 56px; flex-shrink: 0;">
+                                <svg viewBox="0 0 56 56" class="w-full h-full">
+                                    <circle class="progress-ring-bg" cx="28" cy="28" r="24" fill="none" stroke-width="4"/>
+                                    <circle class="progress-ring-fill" cx="28" cy="28" r="24" fill="none" stroke-width="4"
+                                            stroke-linecap="round"
+                                            stroke-dasharray="{{ 2 * 3.14159 * 24 }}"
+                                            stroke-dashoffset="{{ 2 * 3.14159 * 24 * (1 - progress) }}"/>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span class="text-xs font-bold" style="color: var(--brand);">{{ (progress * 100)|int }}%</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Collected Specs</h2>
+                                <p class="text-xs" style="color: var(--text-tertiary);">
+                                    {% set filled_count = order.intake_questions|selectattr('field_name', 'in', order.customer_specs)|list|length %}
+                                    {{ filled_count }} of {{ order.intake_questions|length }} details collected
+                                </p>
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-1">
+                            {% for q in order.intake_questions %}
+                            {% set has_value = order.customer_specs.get(q.field_name) %}
+                            <div class="spec-row {{ 'filled' if has_value else ('waiting' if q.required else 'optional-empty') }}">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs mb-0.5" style="color: var(--text-tertiary);">{{ q.question }}</div>
+                                        {% if has_value %}
+                                        <div class="text-sm font-semibold" style="color: var(--text-primary);">{{ order.customer_specs[q.field_name] }}</div>
+                                        {% else %}
+                                        <div class="text-sm italic" style="color: var(--text-tertiary);">{% if q.required %}Waiting...{% else %}Optional{% endif %}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-3 shrink-0">
+                                        {% if has_value %}
+                                        <svg class="w-5 h-5" style="color: var(--sage);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        {% elif q.required %}
+                                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background: #d97706;"></span>
+                                        {% else %}
+                                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background: var(--surface-3);"></span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="px-5 pb-4 flex gap-2">
+                            <button onclick="copyAllSpecs()" class="export-btn btn-primary">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                                Copy All Specs
+                            </button>
+                            <button onclick="downloadSpecs()" class="export-btn btn-secondary">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                Download
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Intake Link Card -->
+                    <div class="copy-card p-5 animate-in delay-2">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--brand-bg);">
+                                <svg class="w-5 h-5" style="color: var(--brand);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold" style="color: var(--text-primary);">Buyer intake link</p>
+                                <p class="text-xs" style="color: var(--text-tertiary);">Send this to your buyer after purchase</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="copyLink('/intake/{{ order.id }}')" class="btn-primary flex-1 justify-center">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                                Copy Link
+                            </button>
+                            <a href="mailto:?subject=Your custom order details&body=Hi! Please fill out your order details here: {{ request.host_url.rstrip('/') }}/intake/{{ order.id }}" class="btn-secondary justify-center">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                Email
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Seller Notes -->
+                    <div class="card animate-in delay-3">
+                        <div class="px-5 py-4 border-b" style="border-color: var(--border-subtle);">
+                            <h2 class="text-sm font-semibold text-center" style="color: var(--text-primary);">Seller Notes</h2>
+                        </div>
+                        <div class="p-5">
+                            <textarea id="seller-order-notes" class="notes-textarea" placeholder="Add private notes about this order..." onblur="saveOrderNotes()">{{ order.seller_order_notes or '' }}</textarea>
+                            <p class="text-xs mt-2" style="color: var(--text-tertiary);">Auto-saves when you click away. Only visible to you.</p>
+                        </div>
+                    </div>
+
+                    {% if order.specs_complete %}
+                    <!-- Fulfillment Status -->
+                    <div class="card animate-in delay-3">
+                        <div class="px-5 py-4 border-b" style="border-color: var(--border-subtle);">
+                            <h2 class="text-sm font-semibold text-center" style="color: var(--text-primary);">Fulfillment</h2>
+                        </div>
+                        <div class="p-5">
+                            <select id="fulfillment-select" class="fulfillment-select" onchange="updateFulfillment(this.value)">
+                                <option value="pending" {{ 'selected' if order.fulfillment_status == 'pending' or not order.fulfillment_status }}>Pending</option>
+                                <option value="in_progress" {{ 'selected' if order.fulfillment_status == 'in_progress' }}>In Progress</option>
+                                <option value="shipped" {{ 'selected' if order.fulfillment_status == 'shipped' }}>Shipped</option>
+                                <option value="delivered" {{ 'selected' if order.fulfillment_status == 'delivered' }}>Delivered</option>
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Conversation Column -->
+                <div class="card animate-in delay-2">
+                    <div class="px-5 py-4 border-b" style="border-color: var(--border-subtle);">
+                        <h2 class="text-base font-semibold text-center" style="color: var(--text-primary);">Conversation</h2>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex flex-col gap-2.5 max-h-[500px] overflow-y-auto" style="scroll-behavior: smooth;">
+                            {% for msg in messages %}
+                            <div class="msg {{ 'msg-bot' if msg.direction == 'outbound' else 'msg-buyer' }}">
+                                {{ msg.content }}
+                                <div class="text-xs mt-1 opacity-60">{{ 'Bot' if msg.direction == 'outbound' else 'Buyer' }} · {{ msg.created_at[:16] if msg.created_at else '' }}</div>
+                            </div>
+                            {% endfor %}
+                            {% if not messages %}
+                            <div class="text-center py-12">
+                                <svg class="w-16 h-16 mx-auto mb-4" style="color: var(--text-tertiary); opacity: 0.4;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                <p class="text-sm font-medium mb-1" style="color: var(--text-secondary);">Waiting for {{ order.buyer_name or 'the buyer' }}</p>
+                                <p class="text-xs" style="color: var(--text-tertiary);">Conversation starts when they open the intake link.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const ORDER_ID = '{{ order.id }}';
+const SPECS_DATA = {{ order.customer_specs|tojson }};
+const QUESTIONS_DATA = {{ order.intake_questions|tojson }};
+const PRODUCT_TITLE = {{ order.product_title|tojson }};
+const BUYER_NAME = {{ (order.buyer_name or order.buyer_email or 'Unknown')|tojson }};
+
+function formatSpecsText() {
+    let text = 'Product: ' + PRODUCT_TITLE + '\nBuyer: ' + BUYER_NAME + '\n\n';
+    QUESTIONS_DATA.forEach(q => {
+        const val = SPECS_DATA[q.field_name];
+        if (val) text += q.question + ': ' + val + '\n';
+    });
+    return text.trim();
+}
+
+function copyAllSpecs() {
+    try {
+        navigator.clipboard.writeText(formatSpecsText()).then(() => {
+            showToast('All specs copied to clipboard!', 'success');
+        }).catch(() => {
+            showToast('Could not copy to clipboard', 'error');
+        });
+    } catch(e) {
+        showToast('Clipboard not available', 'error');
+    }
+}
+
+function downloadSpecs() {
+    try {
+        const text = formatSpecsText();
+        const blob = new Blob([text], {type: 'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'specs-' + ORDER_ID.substring(0, 6) + '.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Specs downloaded!', 'success');
+    } catch(e) {
+        showToast('Could not download specs', 'error');
+    }
+}
+
+function saveOrderNotes() {
+    const textarea = document.getElementById('seller-order-notes');
+    const notes = textarea.value;
+    fetch('/orders/' + ORDER_ID + '/notes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken()},
+        body: JSON.stringify({notes: notes})
+    }).then(r => r.json()).then(data => {
+        if (data.ok) showToast('Notes saved', 'success');
+    }).catch(() => {
+        showToast('Failed to save notes', 'error');
+    });
+}
+
+function updateFulfillment(status) {
+    fetch('/orders/' + ORDER_ID + '/fulfillment', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken()},
+        body: JSON.stringify({status: status})
+    }).then(r => r.json()).then(data => {
+        if (data.ok) showToast('Fulfillment updated', 'success');
+    });
+}
+</script>
+{% endblock %}

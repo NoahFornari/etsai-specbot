@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Not Found — ETSAI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          display: ['DM Serif Display', 'Georgia', 'serif'],
+        }}}
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff;
+            --surface-1: #faf8f5;
+            --surface-2: #f2ede7;
+            --text-primary: #2c1810;
+            --text-secondary: #78716c;
+            --text-tertiary: #a8a29e;
+            --brand: #4a6741;
+            --brand-bg: rgba(74, 103, 65, 0.08);
+        }
+        html.dark {
+            --surface-0: #1c1917;
+            --surface-1: #171412;
+            --surface-2: #292524;
+            --text-primary: #ede6df;
+            --text-secondary: #b5a898;
+            --text-tertiary: #78716c;
+            --brand: #6b9460;
+            --brand-bg: rgba(107, 148, 96, 0.12);
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--surface-1); color: var(--text-primary);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; padding: 20px; margin: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes gentleShake {
+            0%, 100% { transform: translateX(0); }
+            15%, 55% { transform: translateX(-3px); }
+            35%, 75% { transform: translateX(3px); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-card {
+            background: var(--surface-0); border-radius: 24px; padding: 48px 40px;
+            max-width: 400px; width: 100%; text-align: center;
+            box-shadow: 0 4px 24px rgba(44, 24, 16, 0.06);
+            animation: scaleIn 0.5s ease forwards;
+        }
+        html.dark .error-card { box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+
+        .error-icon {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: var(--brand-bg);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            animation: gentleShake 0.6s ease 0.3s;
+        }
+        .error-icon svg { width: 32px; height: 32px; color: var(--brand); }
+
+        .title {
+            font-family: 'DM Serif Display', Georgia, serif;
+            font-size: 1.5rem; font-weight: 400; margin-bottom: 8px;
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.2s;
+        }
+        .desc {
+            font-size: 0.9375rem; line-height: 1.6;
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.3s;
+            color: var(--text-secondary);
+        }
+
+        .branding {
+            opacity: 0; animation: fadeInUp 0.4s ease forwards 0.5s;
+            margin-top: 28px;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand), #5c7d52, #7a9b6f);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827m0 3.75h.007v.008H12v-.008z"/>
+                <circle cx="12" cy="12" r="10"/>
+            </svg>
+        </div>
+        <h1 class="title">Hmm, we can't find that order.</h1>
+        <p class="desc">{{ message }}</p>
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; opacity: 0; animation: fadeInUp 0.4s ease forwards 0.4s;">
+            <a href="/" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; border-radius: 12px; font-size: 0.875rem; font-weight: 600; text-decoration: none; background: linear-gradient(135deg, #4a6741, #5c7d52); color: white;">Go to Homepage</a>
+            <a href="/support" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; border-radius: 12px; font-size: 0.875rem; font-weight: 600; text-decoration: none; background: var(--surface-2); color: var(--text-primary);">Contact Support</a>
+        </div>
+        <div class="branding">
+            <span class="text-xs" style="color: var(--text-tertiary);">Powered by </span>
+            <span class="inline-flex items-center gap-1 text-xs font-bold"><svg class="w-3.5 h-3.5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+        </div>
+    </div>
+</body>
+</html>

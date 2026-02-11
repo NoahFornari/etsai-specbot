@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Order Details — {{ order.shop_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          display: ['DM Serif Display', 'Georgia', 'serif'],
+        }}}
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #ffffff;
+            --surface-1: #faf8f5;
+            --surface-2: #f2ede7;
+            --surface-3: #e6dfd6;
+            --text-primary: #2c1810;
+            --text-secondary: #78716c;
+            --text-tertiary: #a8a29e;
+            --border-default: #e6dfd6;
+            --brand: #4a6741;
+            --brand-light: #5c7d52;
+            --brand-lighter: #7a9b6f;
+            --brand-bg: rgba(74, 103, 65, 0.08);
+            --sage: #7a8c6e;
+            --sage-bg: rgba(122, 140, 110, 0.1);
+            --chat-bot: #f2ede7;
+        }
+        html.dark {
+            --surface-0: #1c1917;
+            --surface-1: #171412;
+            --surface-2: #292524;
+            --surface-3: #3b3532;
+            --text-primary: #ede6df;
+            --text-secondary: #b5a898;
+            --text-tertiary: #78716c;
+            --border-default: #3b3532;
+            --brand: #6b9460;
+            --brand-light: #8aaf7e;
+            --brand-lighter: #a8c89e;
+            --brand-bg: rgba(107, 148, 96, 0.12);
+            --sage: #8fa382;
+            --sage-bg: rgba(143, 163, 130, 0.12);
+            --chat-bot: #292524;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--surface-1); color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-16px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(16px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes bounceDot {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Chat layout */
+        .chat-wrapper { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+        .chat-header {
+            background: var(--surface-0); border-bottom: 1px solid var(--border-default);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .chat-container {
+            flex: 1; overflow-y: auto; scroll-behavior: smooth;
+            padding: 16px; display: flex; flex-direction: column; gap: 6px;
+            max-width: 640px; width: 100%; margin: 0 auto;
+        }
+        .chat-input-area {
+            background: var(--surface-0); border-top: 1px solid var(--border-default);
+            padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            max-width: 640px; width: 100%; margin: 0 auto;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 80%; padding: 10px 16px; font-size: 0.9375rem; line-height: 1.5;
+            word-wrap: break-word; position: relative;
+        }
+        .message.bot {
+            background: var(--chat-bot); color: var(--text-primary);
+            border-radius: 20px 20px 20px 6px;
+            align-self: flex-start;
+            animation: slideInLeft 0.3s ease;
+        }
+        .message.buyer {
+            background: linear-gradient(135deg, #4a6741 0%, #5c7d52 100%);
+            color: white;
+            border-radius: 20px 20px 6px 20px;
+            align-self: flex-end;
+            animation: slideInRight 0.3s ease;
+        }
+        html.dark .message.buyer {
+            background: linear-gradient(135deg, #3d5a37 0%, #4a6741 100%);
+        }
+        .message.system {
+            background: transparent; text-align: center; align-self: center;
+            font-size: 0.8125rem; color: var(--text-tertiary);
+            padding: 6px 16px; border-radius: 100px;
+            background: var(--surface-2);
+            animation: fadeIn 0.4s ease;
+            max-width: 90%;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none; align-self: flex-start;
+            padding: 12px 18px; background: var(--chat-bot);
+            border-radius: 20px 20px 20px 6px;
+        }
+        .typing-indicator .typing-text {
+            font-size: 0.8125rem; color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+        .typing-dots { display: flex; gap: 3px; }
+        .typing-indicator span {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-tertiary); margin: 0 1.5px;
+            animation: bounceDot 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        /* Input */
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        .input-row input {
+            flex: 1; padding: 12px 20px; border: none; font-size: 0.9375rem;
+            border-radius: 24px; outline: none; transition: all 0.2s;
+            background: var(--surface-2); color: var(--text-primary);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .input-row input::placeholder { color: var(--text-tertiary); }
+        .input-row input:focus { box-shadow: 0 0 0 2px rgba(74,103,65,0.25); }
+
+        .send-btn {
+            width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #4a6741, #5c7d52);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(74,103,65,0.3);
+        }
+        .send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(74,103,65,0.4); }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+        .send-btn svg { width: 18px; height: 18px; color: white; }
+
+        /* Progress bar */
+        .progress-wrap {
+            padding: 0 16px; display: flex; align-items: center; gap: 10px; height: 28px;
+            background: var(--surface-0);
+        }
+        .progress-track { flex: 1; height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+        .progress-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(90deg, #4a6741, #5c7d52, #7a9b6f);
+            transition: width 0.5s ease;
+        }
+        .progress-text { font-size: 0.6875rem; font-weight: 600; color: var(--text-tertiary); white-space: nowrap; }
+
+        /* Dark mode toggle */
+        .dm-toggle {
+            position: absolute; top: 12px; right: 16px; padding: 6px; border-radius: 8px;
+            background: transparent; border: none; cursor: pointer; color: var(--text-tertiary);
+            transition: all 0.2s;
+        }
+        .dm-toggle:hover { background: var(--surface-2); }
+
+        /* Confetti */
+        .confetti-piece {
+            position: fixed; width: 8px; height: 14px; top: -20px; z-index: 100;
+            opacity: 0; pointer-events: none;
+        }
+        .confetti-piece.active { animation: confettiFall 3s ease-out forwards; }
+
+        .input-hint {
+            font-size: 0.6875rem; color: var(--text-tertiary); text-align: center;
+            margin-top: 6px; opacity: 0.7;
+        }
+        @media (max-width: 640px) { .input-hint.desktop-only { display: none; } }
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .chat-input-area {
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            }
+        }
+
+        {% if brand_color %}
+        /* White-label brand color overrides */
+        :root {
+            --brand: {{ brand_color }};
+            --brand-light: {{ brand_color }};
+            --brand-lighter: {{ brand_color }};
+            --brand-bg: {{ brand_color }}14;
+        }
+        .message.buyer {
+            background: linear-gradient(135deg, {{ brand_color }} 0%, {{ brand_color }}dd 100%) !important;
+        }
+        .send-btn {
+            background: linear-gradient(135deg, {{ brand_color }}, {{ brand_color }}dd) !important;
+            box-shadow: 0 2px 8px {{ brand_color }}4d !important;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, {{ brand_color }}, {{ brand_color }}cc, {{ brand_color }}99) !important;
+        }
+        .input-row input:focus {
+            box-shadow: 0 0 0 2px {{ brand_color }}40 !important;
+        }
+        {% endif %}
+    </style>
+</head>
+<body>
+    <div class="chat-wrapper">
+        <!-- Header -->
+        <div class="chat-header relative">
+            <div class="text-center py-3 px-12">
+                <h1 class="text-sm font-semibold" style="color: var(--text-primary);">{{ order.shop_name }}</h1>
+                <p class="text-xs" style="color: var(--text-tertiary);">{{ order.product_title }}</p>
+            </div>
+            <button onclick="toggleDarkMode()" class="dm-toggle" aria-label="Toggle dark mode">
+                <svg class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
+            <div class="progress-wrap">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <span class="progress-text" id="progress-text">0 of 0</span>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-container" id="chat">
+            {% for msg in messages %}
+            <div class="message {{ 'bot' if msg.direction == 'outbound' else 'buyer' }}">
+                {{ msg.content }}
+            </div>
+            {% endfor %}
+            <div class="typing-indicator" id="typing" aria-live="polite" role="status">
+                <div class="typing-text" id="typing-text">Thinking...</div>
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-area">
+            <div class="input-row">
+                <input type="text" id="msg-input" placeholder="Type your response..." autocomplete="off" autofocus>
+                <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled aria-label="Send message">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                </button>
+            </div>
+            <div class="input-hint desktop-only">Press Enter to send</div>
+            {% if not white_label %}
+            <div class="text-center mt-1">
+                <span class="text-xs" style="color: var(--text-tertiary);">Powered by </span>
+                <span class="inline-flex items-center gap-1 text-xs font-bold"><svg class="w-3.5 h-3.5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></span>
+            </div>
+            {% elif brand_logo_url %}
+            <div class="text-center mt-1">
+                <img src="{{ brand_logo_url }}" alt="{{ order.shop_name }}" style="max-height: 20px; max-width: 100px; margin: 0 auto;">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Confetti container -->
+    <div id="confetti-container"></div>
+
+    <script>
+        const orderId = "{{ order.id }}";
+        const questions = {{ order.intake_questions | tojson }};
+        const initialSpecs = {{ order.customer_specs | tojson }};
+        let currentSpecs = {...initialSpecs};
+
+        const typingMessages = [
+            "Thinking...",
+            "Got it, one sec...",
+            "Almost there...",
+            "Let me process that...",
+            "Working on it...",
+        ];
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        }
+
+        function updateProgress() {
+            const required = questions.filter(q => q.required);
+            const total = required.length || questions.length;
+            const filled = (required.length > 0 ? required : questions).filter(q => currentSpecs[q.field_name]);
+            const pct = total > 0 ? (filled.length / total) * 100 : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-text').textContent = filled.length + ' of ' + total + ' details';
+        }
+
+        updateProgress();
+
+        // Enable/disable send button based on input
+        const msgInput = document.getElementById('msg-input');
+        const sendBtn = document.getElementById('send-btn');
+        msgInput.addEventListener('input', function() {
+            sendBtn.disabled = !this.value.trim();
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            appendMessage(msg, 'buyer');
+            input.value = '';
+            sendBtn.disabled = true;
+
+            // Show typing with random personality message
+            const typingEl = document.getElementById('typing');
+            const typingTextEl = document.getElementById('typing-text');
+            typingTextEl.textContent = typingMessages[Math.floor(Math.random() * typingMessages.length)];
+            typingEl.style.display = 'block';
+            scrollToBottom();
+
+            try {
+                const resp = await fetch(`/intake/${orderId}/message`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg})
+                });
+                const data = await resp.json();
+
+                typingEl.style.display = 'none';
+
+                if (data.error && data.complete) {
+                    appendMessage("All details collected! Thank you!", "system");
+                    disableInput();
+                    updateProgress();
+                    celebrateCompletion();
+                    return;
+                }
+
+                if (data.specs_extracted) {
+                    Object.assign(currentSpecs, data.specs_extracted);
+                    updateProgress();
+                }
+
+                appendMessage(data.response, 'bot');
+
+                if (data.is_complete) {
+                    setTimeout(() => {
+                        appendMessage("All done! Your details are on their way.", "system");
+                        disableInput();
+                        updateProgress();
+                        celebrateCompletion();
+                    }, 800);
+                }
+
+                if (data.should_escalate) {
+                    setTimeout(() => {
+                        appendMessage("A team member will follow up with you directly.", "system");
+                    }, 500);
+                }
+            } catch (err) {
+                typingEl.style.display = 'none';
+                appendMessage("Something went wrong. Please try again.", "system");
+            }
+
+            sendBtn.disabled = !input.value.trim();
+            input.focus();
+        }
+
+        function appendMessage(text, type) {
+            const chat = document.getElementById('chat');
+            const typing = document.getElementById('typing');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = text;
+            chat.insertBefore(div, typing);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const chat = document.getElementById('chat');
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function disableInput() {
+            document.getElementById('msg-input').disabled = true;
+            document.getElementById('send-btn').disabled = true;
+            document.getElementById('msg-input').placeholder = "All done!";
+            document.querySelector('.input-hint')?.remove();
+        }
+
+        // CSS-only confetti celebration
+        function celebrateCompletion() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                // Skip confetti, just redirect
+                setTimeout(() => { window.location.href = `/intake/${orderId}`; }, 5000);
+                return;
+            }
+            const container = document.getElementById('confetti-container');
+            const colors = ['#4a6741', '#5c7d52', '#7a9b6f', '#7a8c6e', '#8fa382', '#d97706', '#f59e0b'];
+
+            for (let i = 0; i < 40; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 1.5 + 's';
+                piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.width = (6 + Math.random() * 6) + 'px';
+                piece.style.height = (8 + Math.random() * 10) + 'px';
+                container.appendChild(piece);
+                // Trigger animation
+                requestAnimationFrame(() => piece.classList.add('active'));
+            }
+
+            // Show redirect countdown
+            setTimeout(() => {
+                const msg = document.createElement('div');
+                msg.className = 'message system';
+                msg.innerHTML = 'Redirecting in a moment... <button onclick="this.parentElement.remove(); clearTimeout(window._redirectTimer);" style="text-decoration:underline; background:none; border:none; cursor:pointer; color:inherit; font-size:inherit;">Stay here</button>';
+                document.getElementById('chat').insertBefore(msg, document.getElementById('typing'));
+                scrollToBottom();
+                window._redirectTimer = setTimeout(() => {
+                    window.location.href = `/intake/${orderId}`;
+                }, 5000);
+            }, 1500);
+        }
+
+        document.getElementById('msg-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        scrollToBottom();
+
+        document.getElementById('msg-input').addEventListener('focus', function() {
+            setTimeout(() => this.scrollIntoView({block: 'center', behavior: 'smooth'}), 300);
+        });
+    </script>
+</body>
+</html>
