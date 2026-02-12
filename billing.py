@@ -2,10 +2,10 @@
 ETSAI Billing — Stripe integration for subscription management.
 
 Plans:
-  - free:     14-day trial, 10 orders/mo, 3 products
-  - starter:  $29/mo, 50 orders/mo, 15 products
-  - pro:      $59/mo, 250 orders/mo, unlimited products
-  - business: $119/mo, 1000 orders/mo, unlimited products, white-label, API access
+  - free:     14-day trial, 5 orders/mo, 2 products
+  - starter:  $19/mo, 25 orders/mo, 5 products
+  - pro:      $39/mo, 100 orders/mo, unlimited products
+  - business: $79/mo, 500 orders/mo, unlimited products, white-label
 """
 import os
 import logging
@@ -18,8 +18,8 @@ PLANS = {
     "free": {
         "name": "Free Trial",
         "price": 0,
-        "orders_per_month": 10,
-        "max_products": 3,
+        "orders_per_month": 5,
+        "max_products": 2,
         "white_label": False,
         "api_access": False,
         "trial_days": 14,
@@ -27,9 +27,9 @@ PLANS = {
     },
     "starter": {
         "name": "Starter",
-        "price": 29,
-        "orders_per_month": 50,
-        "max_products": 15,
+        "price": 19,
+        "orders_per_month": 25,
+        "max_products": 5,
         "white_label": False,
         "api_access": False,
         "trial_days": 0,
@@ -37,21 +37,21 @@ PLANS = {
     },
     "pro": {
         "name": "Pro",
-        "price": 59,
-        "orders_per_month": 250,
+        "price": 39,
+        "orders_per_month": 100,
         "max_products": -1,  # unlimited
         "white_label": False,
-        "api_access": True,
+        "api_access": False,
         "trial_days": 0,
         "stripe_price_id": os.environ.get("STRIPE_PRICE_PRO"),
     },
     "business": {
         "name": "Business",
-        "price": 119,
-        "orders_per_month": 1000,
+        "price": 79,
+        "orders_per_month": 500,
         "max_products": -1,  # unlimited
         "white_label": True,
-        "api_access": True,
+        "api_access": False,
         "trial_days": 0,
         "stripe_price_id": os.environ.get("STRIPE_PRICE_BUSINESS"),
     },
