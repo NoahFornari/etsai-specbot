@@ -1,15 +1,20 @@
 """
 ETSAI Growth Bot — Commander Agent (The Brain)
 Runs every hour. Reviews metrics, allocates budget, dispatches agents.
-Uses Claude Sonnet for strategic decisions.
+Uses Claude Sonnet for strategic decisions. Builds a self-learning playbook.
 """
 import json
 import logging
 import time
 from datetime import datetime
+from pathlib import Path
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path, override=True)
 
 from ai_engine import call_claude, AI_MODEL_SMART, AI_MODEL_CHEAP
 from growth.growth_db import (
@@ -17,10 +22,12 @@ from growth.growth_db import (
     get_agent_stats, get_last_agent_run, get_lead_funnel,
     get_active_campaigns, log_agent_action, get_agent_log,
     get_messages_sent_today, get_lead_count_today, get_videos_published_today,
+    upsert_learning, get_top_learnings, get_learnings, get_conn,
 )
 from growth.growth_config import (
     DAILY_BUDGET, GROWTH_ENABLED,
     CHANNEL_EMAIL, CHANNEL_REDDIT, CHANNEL_YOUTUBE, CHANNEL_ETSY_CONVO,
+    LEARNING_ENABLED,
 )
 
 logger = logging.getLogger("etsai.growth.commander")
@@ -67,6 +74,144 @@ def _collect_metrics():
 
 
 # =============================================================
+# SELF-LEARNING — PLAYBOOK & CHANNEL ROI
+# =============================================================
+
+def update_commander_learnings():
+    """Track channel ROI (cost per response) from agent logs and message stats."""
+    if not LEARNING_ENABLED:
+        return
+
+    conn = get_conn()
+    try:
+        # Per-channel stats
+        rows = conn.execute("""
+            SELECT channel,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+                   SUM(CASE WHEN status = 'replied' THEN 1 ELSE 0 END) as replied
+            FROM growth_messages
+            WHERE status IN ('sent', 'replied')
+            GROUP BY channel
+        """).fetchall()
+    finally:
+        conn.close()
+
+    # Get total spend from agent logs
+    conn = get_conn()
+    try:
+        spend_row = conn.execute("""
+            SELECT COALESCE(SUM(cost), 0) as total_cost
+            FROM growth_agent_log
+        """).fetchone()
+        total_spend = spend_row["total_cost"] if spend_row else 0
+    finally:
+        conn.close()
+
+    total_sent_all = sum(dict(r).get("sent", 0) + dict(r).get("replied", 0) for r in rows)
+
+    for row in rows:
+        r = dict(row)
+        channel = r["channel"]
+        sent = r["sent"] + r["replied"]
+        replied = r["replied"]
+
+        if sent == 0:
+            continue
+
+        reply_rate = (replied / sent) * 100
+        # Approximate per-channel cost (proportional to messages sent)
+        channel_cost = (sent / total_sent_all * total_spend) if total_sent_all > 0 else 0
+        cost_per_response = (channel_cost / replied) if replied > 0 else float("inf")
+
+        confidence = min(sent / 20, 1.0)
+        # Score: higher reply rate + lower cost = better
+        score = reply_rate * 2 - min(cost_per_response, 10)
+
+        upsert_learning(
+            agent="commander",
+            learning_type="channel_roi",
+            key=channel,
+            value_json={
+                "reply_rate": round(reply_rate, 1),
+                "sent": sent,
+                "replied": replied,
+                "approx_cost": round(channel_cost, 4),
+                "cost_per_response": round(cost_per_response, 4) if cost_per_response != float("inf") else None,
+            },
+            score=round(score, 2),
+            sample_size=sent,
+            confidence=round(confidence, 2),
+        )
+
+    logger.info(f"Commander: Updated channel ROI learnings for {len(rows)} channels")
+
+
+def _build_playbook():
+    """Compile all learnings into a strategy summary for Claude's prompt."""
+    if not LEARNING_ENABLED:
+        return ""
+
+    sections = []
+
+    # Top niches
+    niche_learnings = get_top_learnings("scout", "niche_performance", limit=5, min_sample=3)
+    if niche_learnings:
+        niche_lines = []
+        for l in niche_learnings:
+            v = l.get("value_json", {})
+            niche_lines.append(
+                f"  - {l['key']}: hot_rate={v.get('hot_rate', 0)}%, "
+                f"response_rate={v.get('response_rate', 0)}%, "
+                f"leads={v.get('total_leads', 0)}"
+            )
+        sections.append("TOP NICHES (by lead quality):\n" + "\n".join(niche_lines))
+
+    # Best message styles
+    variant_learnings = get_top_learnings("writer", "variant_performance", limit=4, min_sample=5)
+    if variant_learnings:
+        variant_lines = []
+        for l in variant_learnings:
+            v = l.get("value_json", {})
+            variant_lines.append(
+                f"  - {l['key']}: reply_rate={v.get('reply_rate', 0)}%, "
+                f"sent={v.get('sent', 0)}"
+            )
+        sections.append("BEST MESSAGE STYLES:\n" + "\n".join(variant_lines))
+
+    # Best subreddits
+    sub_learnings = get_top_learnings("listener", "subreddit_quality", limit=5, min_sample=3)
+    if sub_learnings:
+        sub_lines = []
+        for l in sub_learnings:
+            v = l.get("value_json", {})
+            sub_lines.append(
+                f"  - r/{l['key']}: relevance_rate={v.get('relevance_rate', 0)}%, "
+                f"relevant={v.get('relevant', 0)}/{v.get('total', 0)}"
+            )
+        sections.append("BEST SUBREDDITS:\n" + "\n".join(sub_lines))
+
+    # Channel ROI
+    roi_learnings = get_top_learnings("commander", "channel_roi", limit=5, min_sample=5)
+    if roi_learnings:
+        roi_lines = []
+        for l in roi_learnings:
+            v = l.get("value_json", {})
+            cpr = v.get("cost_per_response")
+            cpr_str = f"${cpr:.3f}" if cpr is not None else "N/A"
+            roi_lines.append(
+                f"  - {l['key']}: reply_rate={v.get('reply_rate', 0)}%, "
+                f"cost_per_response={cpr_str}"
+            )
+        sections.append("CHANNEL ROI:\n" + "\n".join(roi_lines))
+
+    if not sections:
+        return ""
+
+    return "\n\nPLAYBOOK (learned from past performance):\n" + "\n\n".join(sections)
+
+
+# =============================================================
 # BUDGET ALLOCATION
 # =============================================================
 
@@ -80,6 +225,8 @@ def allocate_budget(metrics, model=None):
     budget_remaining = metrics.get("budget_remaining", DAILY_BUDGET)
     overview = metrics.get("overview", {})
     today = metrics.get("today", {})
+
+    playbook = _build_playbook()
 
     prompt = f"""You are the growth strategist for ETSAI (an AI tool for Etsy sellers).
 Review today's metrics and decide how to allocate the remaining budget across our marketing agents.
@@ -101,8 +248,8 @@ ALL-TIME:
 - Total spend: ${overview.get('total_spend', 0):.2f}
 
 CHANNELS ACTIVE: Email={'ON' if CHANNEL_EMAIL else 'OFF'}, Reddit={'ON' if CHANNEL_REDDIT else 'OFF'}, YouTube={'ON' if CHANNEL_YOUTUBE else 'OFF'}, Etsy Convo={'ON' if CHANNEL_ETSY_CONVO else 'OFF'}
-
-Based on these metrics, decide:
+{playbook}
+Based on these metrics{' and the playbook above' if playbook else ''}, decide:
 1. Which agents should run in the next cycle?
 2. What niches should Scout focus on?
 3. How many emails/Reddit posts should Writer produce?
@@ -329,11 +476,12 @@ def _should_skip_claude(metrics):
 def run_cycle():
     """
     Main Commander loop:
-    1. Collect metrics
-    2. Ask Claude for strategy (or skip if nothing to do)
-    3. Dispatch agents
-    4. Save daily metrics
-    5. Log results
+    1. Update learnings from previous cycles
+    2. Collect metrics
+    3. Ask Claude for strategy (with playbook) or skip if nothing to do
+    4. Dispatch agents
+    5. Save daily metrics
+    6. Log results
     """
     if not GROWTH_ENABLED:
         logger.info("Commander: Growth system disabled")
@@ -344,6 +492,13 @@ def run_cycle():
         "timestamp": datetime.now().isoformat(),
         "agents": {},
     }
+
+    # Step 0: Update learnings before strategy call
+    if LEARNING_ENABLED:
+        try:
+            update_commander_learnings()
+        except Exception as e:
+            logger.error(f"Commander learning update error: {e}")
 
     # Step 1: Collect metrics
     metrics = _collect_metrics()
@@ -400,15 +555,32 @@ def run_cycle():
         notes=instructions.get("strategy_notes", ""),
     )
 
-    # Step 5: Log
+    # Step 5: Build flat summary for dashboard display
+    summary = {
+        "leads_found": (scout_result.get("total_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
+        "etsy_leads": (scout_result.get("etsy_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
+        "reddit_leads": (scout_result.get("reddit_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
+        "messages_drafted": (writer_result.get("drafted", 0) or 0) if isinstance(writer_result, dict) else 0,
+        "threads_found": (listener_result.get("threads_found", 0) or 0) if isinstance(listener_result, dict) else 0,
+        "relevant": (listener_result.get("relevant", 0) or 0) if isinstance(listener_result, dict) else 0,
+        "replies_drafted": (listener_result.get("replies_drafted", 0) or 0) if isinstance(listener_result, dict) else 0,
+        "videos_created": (creator_result.get("videos_created", 0) or 0) if isinstance(creator_result, dict) else 0,
+        "strategy": instructions.get("strategy_notes", ""),
+    }
+    cycle_result["summary"] = summary
+
+    # Step 6: Log
     duration_ms = int((time.time() - start) * 1000)
     cycle_result["duration_ms"] = duration_ms
-    log_agent_action("commander", "run_cycle", True, cycle_result, duration_ms=duration_ms)
+    summary["total_cost"] = round(metrics["overview"].get("spend_today", 0), 4)
+
+    # Log the flat summary as the details (so the dashboard can read it easily)
+    log_agent_action("commander", "run_cycle", True, summary, duration_ms=duration_ms)
 
     logger.info(f"Commander: Cycle complete in {duration_ms}ms — "
-                f"Scout: {scout_result.get('leads_added', 'N/A')}, "
+                f"Scout: {scout_result.get('total_leads', 'N/A')}, "
                 f"Writer: {writer_result.get('drafted', 'N/A')}, "
-                f"Creator: {creator_result.get('videos_created', 'N/A')}")
+                f"Listener: {listener_result.get('threads_found', 'N/A')} threads")
 
     return cycle_result
 
@@ -419,7 +591,6 @@ def run_cycle():
 
 def get_best_performing(channel=None, metric="replied", n=5):
     """Get top-performing messages for template replication."""
-    from growth.growth_db import get_conn
     conn = get_conn()
     try:
         if channel:

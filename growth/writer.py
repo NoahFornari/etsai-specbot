@@ -1,30 +1,41 @@
 """
 ETSAI Growth Bot — Writer Agent
 Multi-channel outreach: email, Reddit comments/posts, Etsy convos, DMs.
-A/B testing, personalization, anti-spam safeguards.
+A/B testing, personalization, anti-spam safeguards, self-learning.
 """
 import json
 import logging
+import random
 import time
 from datetime import datetime
+from pathlib import Path
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path, override=True)
 
 from ai_engine import call_claude, AI_MODEL_CHEAP, AI_MODEL_SMART
 from growth.growth_db import (
     add_growth_message, get_growth_lead, get_lead_messages,
     update_lead_status, update_message_status, get_messages_sent_today,
     log_agent_action, get_message_queue, update_campaign_stats,
+    upsert_learning, get_top_learnings, get_learnings, get_conn,
 )
 from growth.growth_config import (
     WRITER_MAX_EMAILS_PER_DAY, WRITER_MAX_REDDIT_COMMENTS_PER_DAY,
     WRITER_MAX_DMS_PER_DAY, MIN_FOLLOWUP_GAP_DAYS, MAX_FOLLOWUPS_PER_LEAD,
     MIN_RESPONSE_RATE_PCT, REVIEW_QUEUE_REDDIT, REVIEW_QUEUE_EMAIL,
     REVIEW_QUEUE_ETSY_CONVO, CHANNEL_EMAIL, CHANNEL_REDDIT, CHANNEL_ETSY_CONVO,
+    LEARNING_ENABLED,
 )
 
 logger = logging.getLogger("etsai.growth.writer")
+
+# A/B variant styles for message testing
+VARIANTS = ["question_first", "value_first", "casual", "professional"]
 
 # =============================================================
 # SYSTEM PROMPTS
@@ -123,6 +134,14 @@ SUBJECT_SYSTEM = """Generate a cold email subject line for an Etsy seller.
 
 Output the subject line only. No quotes."""
 
+# Variant style instructions appended to prompts
+VARIANT_INSTRUCTIONS = {
+    "question_first": "Style: Lead with a curious question about their workflow before anything else.",
+    "value_first": "Style: Lead with a specific insight or stat about custom order management.",
+    "casual": "Style: Extra casual — like texting a friend who sells on Etsy.",
+    "professional": "Style: Slightly more polished and professional, but still warm.",
+}
+
 
 # =============================================================
 # MESSAGE DRAFTING
@@ -153,6 +172,32 @@ def _build_lead_context(lead):
     return "\n".join(parts)
 
 
+def _get_winning_examples(channel, limit=3):
+    """Query best-performing messages to use as few-shot examples for Claude."""
+    if not LEARNING_ENABLED:
+        return ""
+
+    conn = get_conn()
+    try:
+        rows = conn.execute("""
+            SELECT content, variant FROM growth_messages
+            WHERE channel = %s AND status = 'replied'
+            ORDER BY replied_at DESC LIMIT %s
+        """, (channel, limit)).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return ""
+
+    examples = []
+    for r in rows:
+        d = dict(r)
+        examples.append(d["content"][:200])
+
+    return "\n\nHere are messages that got replies — use as inspiration (but don't copy directly):\n" + "\n---\n".join(examples)
+
+
 def draft_message(lead, channel, campaign_id=None, variant=None):
     """
     Draft a personalized outreach message for a lead.
@@ -170,8 +215,15 @@ def draft_message(lead, channel, campaign_id=None, variant=None):
     context = _build_lead_context(lead)
 
     user_msg = f"Write a personalized {channel} message for this seller:\n\n{context}"
-    if variant:
-        user_msg += f"\n\nVariant style: {variant}"
+
+    # Add variant style instruction
+    if variant and variant in VARIANT_INSTRUCTIONS:
+        user_msg += f"\n\n{VARIANT_INSTRUCTIONS[variant]}"
+
+    # Add winning examples from learnings
+    winning = _get_winning_examples(channel)
+    if winning:
+        user_msg += winning
 
     try:
         raw, cost, inp, out = call_claude(user_msg, AI_MODEL_CHEAP, max_tokens=300, system=system)
@@ -211,7 +263,7 @@ def draft_message(lead, channel, campaign_id=None, variant=None):
 
     duration_ms = int((time.time() - start) * 1000)
     log_agent_action("writer", f"draft_{channel}", True,
-                     {"lead": lead.get("shop_name"), "msg_id": msg_id},
+                     {"lead": lead.get("shop_name"), "msg_id": msg_id, "variant": variant},
                      tokens_used=inp + out, cost=cost, duration_ms=duration_ms)
 
     return msg_id
@@ -381,7 +433,6 @@ def process_send_queue():
     sent = {"email": 0, "etsy_convo": 0, "reddit_reply": 0, "reddit_post": 0, "dm": 0}
 
     # Get approved messages ready to send
-    from growth.growth_db import get_conn
     conn = get_conn()
     try:
         rows = conn.execute("""
@@ -439,7 +490,6 @@ def process_send_queue():
 
 def check_channel_health(channel):
     """Check if a channel should be paused due to low response rate."""
-    from growth.growth_db import get_conn
     conn = get_conn()
     try:
         row = conn.execute("""
@@ -462,6 +512,84 @@ def check_channel_health(channel):
         logger.warning(f"Writer: {channel} response rate {rate:.1f}% below minimum {MIN_RESPONSE_RATE_PCT}%")
         return False
     return True
+
+
+# =============================================================
+# SELF-LEARNING — REPLY RATES & VARIANT PERFORMANCE
+# =============================================================
+
+def update_writer_learnings():
+    """Track reply rates per channel + variant to learn what works."""
+    if not LEARNING_ENABLED:
+        return
+
+    conn = get_conn()
+    try:
+        # Per channel + variant stats
+        rows = conn.execute("""
+            SELECT channel, variant,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+                   SUM(CASE WHEN status = 'replied' THEN 1 ELSE 0 END) as replied
+            FROM growth_messages
+            WHERE status IN ('sent', 'replied')
+            GROUP BY channel, variant
+        """).fetchall()
+    finally:
+        conn.close()
+
+    for row in rows:
+        r = dict(row)
+        channel = r["channel"]
+        variant = r["variant"] or "default"
+        sent = r["sent"] + r["replied"]  # replied is also sent
+        replied = r["replied"]
+
+        if sent == 0:
+            continue
+
+        reply_rate = (replied / sent) * 100
+        confidence = min(sent / 15, 1.0)
+        key = f"{channel}:{variant}"
+
+        upsert_learning(
+            agent="writer",
+            learning_type="variant_performance",
+            key=key,
+            value_json={
+                "channel": channel,
+                "variant": variant,
+                "reply_rate": round(reply_rate, 1),
+                "sent": sent,
+                "replied": replied,
+            },
+            score=round(reply_rate, 2),
+            sample_size=sent,
+            confidence=round(confidence, 2),
+        )
+
+    logger.info(f"Writer: Updated learnings for {len(rows)} channel/variant combos")
+
+
+def _pick_variant():
+    """Pick a variant for A/B testing. Prefers high-performing variants but explores."""
+    if not LEARNING_ENABLED:
+        return random.choice(VARIANTS)
+
+    top = get_top_learnings("writer", "variant_performance", limit=4, min_sample=5)
+    if not top:
+        return random.choice(VARIANTS)
+
+    # 80% exploit best, 20% explore random
+    if random.random() < 0.2:
+        return random.choice(VARIANTS)
+
+    best_key = top[0]["key"]
+    # key format is "channel:variant"
+    variant = best_key.split(":")[-1] if ":" in best_key else best_key
+    if variant in VARIANTS:
+        return variant
+    return random.choice(VARIANTS)
 
 
 # =============================================================
@@ -495,13 +623,22 @@ def run():
         else:
             continue
 
-        msg_id = draft_message(lead, channel)
+        # A/B variant assignment
+        variant = _pick_variant()
+        msg_id = draft_message(lead, channel, variant=variant)
         if msg_id:
             result["drafted"] += 1
         time.sleep(0.3)
 
     # Process send queue
     result["sent"] = process_send_queue()
+
+    # Update learnings
+    if LEARNING_ENABLED:
+        try:
+            update_writer_learnings()
+        except Exception as e:
+            logger.error(f"Writer learning update error: {e}")
 
     duration_ms = int((time.time() - start) * 1000)
     log_agent_action("writer", "run", True, result, duration_ms=duration_ms)

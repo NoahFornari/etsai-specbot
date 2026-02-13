@@ -1572,11 +1572,21 @@ def growth_dashboard():
             "error_count": (stats.get("actions", 0) or 0) - (stats.get("successes", 0) or 0),
         }
 
+    # Last commander cycle for summary banner
+    last_cycle = get_last_agent_run("commander")
+    if last_cycle:
+        details = last_cycle.get("details", {})
+        # New format: details IS the flat summary. Old format: details has nested "summary" key
+        last_cycle_details = details.get("summary", details) if isinstance(details, dict) else {}
+    else:
+        last_cycle_details = {}
+
     return render_template("growth_dashboard.html",
                            seller=seller, overview=overview, funnel=funnel,
                            config=config, agents=agents, review_queue=review_queue,
                            agent_log=agent_log, content=content,
-                           hot_leads=hot_leads, etsy_queue=etsy_queue)
+                           hot_leads=hot_leads, etsy_queue=etsy_queue,
+                           last_cycle=last_cycle, last_cycle_details=last_cycle_details)
 
 
 @app.route("/growth/settings", methods=["GET", "POST"])
@@ -1622,6 +1632,59 @@ def growth_settings():
     return render_template("growth_settings.html", seller=seller, config=config)
 
 
+def _format_growth_result(agent, result):
+    """Format a growth agent result dict into a human-readable summary."""
+    if not result or not isinstance(result, dict):
+        return f"{agent.title()} finished."
+    parts = []
+    # Commander cycle — use the flat summary
+    if agent == "commander":
+        s = result.get("summary", result)
+        if s.get("leads_found"):
+            parts.append(f"{s['leads_found']} leads found")
+        if s.get("reddit_leads"):
+            parts.append(f"{s['reddit_leads']} from Reddit")
+        if s.get("messages_drafted"):
+            parts.append(f"{s['messages_drafted']} messages drafted")
+        if s.get("threads_found"):
+            parts.append(f"{s['threads_found']} threads scanned")
+        if s.get("relevant"):
+            parts.append(f"{s['relevant']} relevant")
+        if s.get("replies_drafted"):
+            parts.append(f"{s['replies_drafted']} replies drafted")
+        if s.get("total_cost"):
+            parts.append(f"${s['total_cost']:.3f} spent")
+    # Scout
+    elif agent == "scout":
+        if result.get("etsy_leads"):
+            parts.append(f"{result['etsy_leads']} Etsy leads")
+        if result.get("reddit_leads"):
+            parts.append(f"{result['reddit_leads']} Reddit leads")
+        if result.get("total_leads"):
+            parts.append(f"{result['total_leads']} total leads")
+    # Writer
+    elif agent == "writer":
+        if result.get("drafted"):
+            parts.append(f"{result['drafted']} messages drafted")
+        if result.get("leads_processed"):
+            parts.append(f"{result['leads_processed']} leads processed")
+    # Listener
+    elif agent == "listener":
+        if result.get("threads_found"):
+            parts.append(f"{result['threads_found']} threads found")
+        if result.get("relevant"):
+            parts.append(f"{result['relevant']} relevant")
+        if result.get("replies_drafted"):
+            parts.append(f"{result['replies_drafted']} replies drafted")
+    # Fallback
+    if not parts:
+        for k, v in result.items():
+            if k not in ("status", "cost", "duration_ms") and v:
+                parts.append(f"{k}: {v}")
+    summary = ", ".join(parts[:6]) if parts else "Completed"
+    return f"{agent.title()} — {summary}"
+
+
 @app.route("/growth/trigger", methods=["POST"])
 def growth_trigger():
     seller_id = session.get("seller_id")
@@ -1652,7 +1715,9 @@ def growth_trigger():
             flash(f"Unknown agent: {agent}", "error")
             return redirect(url_for("growth_dashboard"))
 
-        flash(f"{agent.title()} cycle complete: {json.dumps(result, default=str)[:200]}", "success")
+        # Build a human-readable summary instead of raw JSON
+        summary = _format_growth_result(agent, result)
+        flash(summary, "success")
     except Exception as e:
         logger.error("Growth trigger error: %s", e)
         flash(f"Error running {agent}: {str(e)[:200]}", "error")

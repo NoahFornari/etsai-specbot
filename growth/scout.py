@@ -5,18 +5,29 @@ Uses Claude Haiku for intelligent lead scoring.
 """
 import json
 import logging
+import random
 import time
 from datetime import datetime
+from pathlib import Path
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+# Explicitly load .env from project root so ETSY_API_KEY is always available
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path, override=True)
 
 from ai_engine import call_claude, AI_MODEL_CHEAP, AI_MODEL_SMART
 from growth.growth_db import (
     add_growth_lead, lead_exists, get_lead_count_today,
     update_lead_score, log_agent_action, get_conn,
+    upsert_learning, get_top_learnings, get_learnings,
 )
-from growth.growth_config import SCOUT_MAX_LEADS_PER_DAY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET
+from growth.growth_config import (
+    SCOUT_MAX_LEADS_PER_DAY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET,
+    LEARNING_ENABLED, LEARNING_EXPLORATION_RATE,
+)
 
 logger = logging.getLogger("etsai.growth.scout")
 
@@ -45,28 +56,42 @@ CUSTOM_SIGNALS = [
 # ETSY SEARCH — API (if key available) + Web Scraping fallback
 # =============================================================
 
-def _etsy_api_get(path, params=None):
-    """Etsy API GET request (public endpoints, API key only)."""
+def _etsy_api_get(path, params=None, retries=2):
+    """Etsy API GET request with retry + exponential backoff."""
     import requests
     api_key = os.getenv("ETSY_API_KEY", "")
     if not api_key:
-        return None  # Silently return None — caller will try scraping fallback
+        logger.warning("Scout: ETSY_API_KEY not found in environment")
+        return None
 
     url = f"https://openapi.etsy.com/v3{path}"
     headers = {"x-api-key": api_key}
-    try:
-        resp = requests.get(url, headers=headers, params=params, timeout=20)
-        if resp.status_code == 429:
-            logger.warning("Etsy rate limited, backing off 10s")
-            time.sleep(10)
-            return None
-        if resp.status_code != 200:
-            logger.warning(f"Etsy API {resp.status_code}: {resp.text[:200]}")
-            return None
-        return resp.json()
-    except Exception as e:
-        logger.error(f"Etsy API error: {e}")
-        return None
+
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=20)
+            if resp.status_code == 429:
+                wait = 5 * (attempt + 1)
+                logger.warning(f"Etsy rate limited (429). Waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            if resp.status_code == 404:
+                return None
+            if resp.status_code != 200:
+                logger.warning(f"Etsy API {resp.status_code}: {resp.text[:200]}")
+                if attempt < retries:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                return None
+            return resp.json()
+        except Exception as e:
+            if attempt < retries:
+                logger.warning(f"Etsy API request failed ({e}), retry {attempt + 1}/{retries}")
+                time.sleep(3 * (attempt + 1))
+            else:
+                logger.error(f"Etsy API error after {retries + 1} attempts: {e}")
+                return None
+    return None
 
 
 def _scrape_etsy_search(query, limit=48):
@@ -177,35 +202,61 @@ def _scrape_shop_details(shop_name):
         return {"shop_name": shop_name, "url": f"https://www.etsy.com/shop/{shop_name}"}
 
 
+def _has_custom_signals(listing):
+    """Check title, description, tags, and is_personalizable for custom signals."""
+    title = (listing.get("title") or "").lower()
+    description = (listing.get("description") or "").lower()
+    tags = listing.get("tags") or []
+    tags_text = " ".join(t.lower() for t in tags)
+    is_personalizable = listing.get("is_personalizable", False)
+
+    if is_personalizable:
+        return True
+
+    combined = f"{title} {description} {tags_text}"
+    return any(s in combined for s in CUSTOM_SIGNALS)
+
+
 def discover_etsy_leads(niche, limit=50):
-    """Search Etsy for custom order sellers in a niche. Uses API if available, scraping if not."""
+    """Search Etsy for custom order sellers in a niche. Uses API if available, scraping if not.
+    Supports pagination — fetches up to 3 pages from the API."""
     start = time.time()
     queries = NICHE_QUERIES.get(niche, [f"custom {niche}"])
     shops = {}
-    use_api = bool(os.getenv("ETSY_API_KEY", ""))
+    # TODO: Re-enable when Etsy API key is activated
+    # use_api = bool(os.getenv("ETSY_API_KEY", ""))
+    use_api = False
 
     for query in queries:
+        api_worked = False
         if use_api:
-            # API path
-            data = _etsy_api_get("/application/listings/active", {
-                "keywords": query, "limit": min(limit, 100), "sort_on": "score"
-            })
-            if data:
+            # API path — paginate up to 3 pages
+            page_limit = min(limit, 100)
+            for offset in range(0, min(limit, 300), page_limit):
+                data = _etsy_api_get("/application/listings/active", {
+                    "keywords": query, "limit": page_limit,
+                    "offset": offset, "sort_on": "score",
+                })
+                if not data or not data.get("results"):
+                    break
+
+                api_worked = True
                 for listing in data.get("results", []):
                     shop_id = listing.get("shop_id")
                     if not shop_id or shop_id in shops:
                         continue
-                    title = listing.get("title", "")
-                    is_personalizable = listing.get("is_personalizable", False)
-                    has_custom = any(s in title.lower() for s in CUSTOM_SIGNALS) or is_personalizable
-                    if has_custom:
+                    if _has_custom_signals(listing):
                         shops[shop_id] = {
                             "shop_id": shop_id,
-                            "sample_listing": title,
-                            "is_personalizable": is_personalizable,
+                            "sample_listing": listing.get("title", ""),
+                            "is_personalizable": listing.get("is_personalizable", False),
                             "niche": niche,
                         }
-        else:
+
+                time.sleep(0.5)
+
+        if not use_api or not api_worked:
+            # Scraping fallback — API key missing, inactive, or returned errors
             # Scraping fallback (no API key)
             scraped = _scrape_etsy_search(query, limit=min(limit, 48))
             for item in scraped:
@@ -230,17 +281,26 @@ def discover_etsy_leads(niche, limit=50):
             logger.info("Scout: daily lead quota reached")
             break
 
-        if use_api:
+        if shop_data.get("shop_id"):
+            # We got this from API — try API enrichment, fall back to scrape
             details = _get_shop_details(key)
-            if not details or details.get("is_vacation"):
+            if details and not details.get("is_vacation"):
+                shop_url = details.get("url") or f"https://www.etsy.com/shop/{details.get('shop_name', '')}"
+                shop_name = details.get("shop_name", "")
+                sale_count = details.get("sale_count", 0)
+                review_count = details.get("review_count", 0)
+                review_average = details.get("review_average")
+                listing_count = details.get("listing_count", 0)
+                city = details.get("city")
+            elif details and details.get("is_vacation"):
                 continue
-            shop_url = details.get("url") or f"https://www.etsy.com/shop/{details.get('shop_name', '')}"
-            shop_name = details.get("shop_name", "")
-            sale_count = details.get("sale_count", 0)
-            review_count = details.get("review_count", 0)
-            review_average = details.get("review_average")
-            listing_count = details.get("listing_count", 0)
-            city = details.get("city")
+            else:
+                # API enrichment failed — skip enrichment, save with what we have
+                shop_name = f"shop_{key}"
+                shop_url = f"https://www.etsy.com/shop/{shop_name}"
+                sale_count = review_count = listing_count = 0
+                review_average = None
+                city = None
         else:
             shop_name = shop_data.get("shop_name", key)
             shop_url = f"https://www.etsy.com/shop/{shop_name}"
@@ -281,93 +341,287 @@ def discover_etsy_leads(niche, limit=50):
 
 
 # =============================================================
-# REDDIT DISCOVERY
+# REDDIT DISCOVERY — AI-POWERED (no keyword matching)
 # =============================================================
 
-def _get_reddit():
-    """Get a PRAW Reddit instance. Returns None if not configured."""
-    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
-        return None
-    try:
-        import praw
-        return praw.Reddit(
-            client_id=REDDIT_CLIENT_ID,
-            client_secret=REDDIT_CLIENT_SECRET,
-            username=os.getenv("REDDIT_USERNAME", ""),
-            password=os.getenv("REDDIT_PASSWORD", ""),
-            user_agent=os.getenv("REDDIT_USER_AGENT", "ETSAI-GrowthBot/1.0"),
-        )
-    except ImportError:
-        logger.warning("PRAW not installed — skipping Reddit discovery")
-        return None
-    except Exception as e:
-        logger.error(f"Reddit connection error: {e}")
-        return None
+# Seller-specific subs: everyone posting here is likely a seller.
+# Grab ALL posts, let Claude decide who's worth reaching out to.
+SELLER_SUBREDDITS = ["EtsySellers", "Etsy", "craftit", "handmade"]
+# Broader subs: lots of noise, but some sellers post here too.
+GENERAL_SUBREDDITS = ["smallbusiness", "Entrepreneur", "ecommerce", "sidehustle"]
+# Search queries to find sellers actively sharing their shops
+SELLER_SEARCH_QUERIES = [
+    "my etsy shop",
+    "check out my shop",
+    "just opened my etsy",
+    "custom orders etsy",
+    "personalized orders",
+    "I make custom",
+]
 
 
-def discover_reddit_leads(subreddits=None, limit=25):
-    """Find Etsy sellers on Reddit who might need ETSAI."""
-    reddit = _get_reddit()
-    if not reddit:
-        return 0
+def _fetch_reddit_posts(subreddits, limit=25, sort="new"):
+    """Fetch posts from Reddit JSON endpoints. Returns raw post dicts."""
+    import requests
+    headers = {"User-Agent": "ETSAI-GrowthBot/1.0"}
+    all_posts = []
 
-    start = time.time()
-    if not subreddits:
-        subreddits = ["EtsySellers", "Etsy"]
-
-    leads_added = 0
     for sub_name in subreddits:
         try:
-            subreddit = reddit.subreddit(sub_name)
-            for post in subreddit.new(limit=limit):
-                # Look for sellers talking about custom orders
-                text = f"{post.title} {post.selftext}".lower()
-                is_relevant = any(kw in text for kw in [
-                    "custom order", "personalized", "intake form", "buyer info",
-                    "collect details", "order details", "specification",
-                ])
-                if not is_relevant:
+            url = f"https://www.reddit.com/r/{sub_name}/{sort}.json?limit={limit}"
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                logger.warning(f"Reddit r/{sub_name} returned {resp.status_code}")
+                time.sleep(2)
+                continue
+
+            data = resp.json()
+            for child in data.get("data", {}).get("children", []):
+                post = child.get("data", {})
+                author = post.get("author")
+                if not author or author in ("[deleted]", "AutoModerator"):
                     continue
-
-                username = str(post.author) if post.author else None
-                if not username:
-                    continue
-
-                # Deduplicate by reddit username
-                from growth.growth_db import get_conn
-                conn = get_conn()
-                try:
-                    existing = conn.execute(
-                        "SELECT id FROM growth_leads WHERE reddit_username = %s",
-                        (username,)
-                    ).fetchone()
-                finally:
-                    conn.close()
-
-                if existing:
-                    continue
-
-                lead_id = add_growth_lead(
-                    source="reddit",
-                    shop_name=username,
-                    reddit_username=username,
-                    niche="unknown",
-                    enrichment_data={
-                        "subreddit": sub_name,
-                        "post_title": post.title[:200],
-                        "post_url": f"https://reddit.com{post.permalink}",
-                    },
-                )
-                if lead_id:
-                    leads_added += 1
-
+                all_posts.append({
+                    "subreddit": sub_name,
+                    "author": author,
+                    "title": post.get("title", ""),
+                    "body": (post.get("selftext") or "")[:500],
+                    "url": f"https://reddit.com{post.get('permalink', '')}",
+                    "flair": post.get("link_flair_text") or post.get("author_flair_text") or "",
+                    "score": post.get("score", 0),
+                })
+            time.sleep(2)  # Unauthenticated rate limit
         except Exception as e:
-            logger.error(f"Reddit scrape error on r/{sub_name}: {e}")
+            logger.error(f"Reddit fetch error r/{sub_name}: {e}")
+
+    return all_posts
+
+
+def _search_reddit_sellers(limit=10):
+    """Search Reddit for sellers actively sharing their Etsy shops."""
+    import requests
+    headers = {"User-Agent": "ETSAI-GrowthBot/1.0"}
+    all_posts = []
+
+    for query in SELLER_SEARCH_QUERIES:
+        try:
+            url = f"https://www.reddit.com/search.json?q={query.replace(' ', '+')}&sort=new&limit={limit}"
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                time.sleep(2)
+                continue
+
+            data = resp.json()
+            for child in data.get("data", {}).get("children", []):
+                post = child.get("data", {})
+                author = post.get("author")
+                if not author or author in ("[deleted]", "AutoModerator"):
+                    continue
+                all_posts.append({
+                    "subreddit": post.get("subreddit", "search"),
+                    "author": author,
+                    "title": post.get("title", ""),
+                    "body": (post.get("selftext") or "")[:500],
+                    "url": f"https://reddit.com{post.get('permalink', '')}",
+                    "flair": post.get("link_flair_text") or post.get("author_flair_text") or "",
+                    "score": post.get("score", 0),
+                })
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"Reddit search error for '{query}': {e}")
+
+    return all_posts
+
+
+def _extract_shop_urls(text):
+    """Pull Etsy shop URLs from post text."""
+    import re
+    patterns = [
+        r'(?:https?://)?(?:www\.)?etsy\.com/shop/([\w-]+)',
+        r'(?:https?://)?(?:www\.)?etsy\.com/listing/\d+',
+        r'(?:https?://)?([\w-]+)\.etsy\.com',
+    ]
+    shops = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            shops.add(match.group(0))
+    return list(shops)
+
+
+def _classify_leads_batch(posts):
+    """Use Claude to classify which Reddit posters are real Etsy sellers
+    who do custom/personalized work. Processes in batches of 8.
+    Returns list of posts with classification added."""
+
+    classified = []
+    batch_size = 8
+
+    for i in range(0, len(posts), batch_size):
+        batch = posts[i:i + batch_size]
+
+        post_summaries = []
+        for idx, p in enumerate(batch):
+            shop_urls = _extract_shop_urls(f"{p['title']} {p['body']}")
+            shop_str = f" | Shop: {shop_urls[0]}" if shop_urls else ""
+            post_summaries.append(
+                f"{idx + 1}. [r/{p['subreddit']}] u/{p['author']}: "
+                f"{p['title'][:120]}\n   {p['body'][:150]}{shop_str}"
+            )
+
+        prompt = f"""Analyze these Reddit posts. For each one, determine:
+1. Is this person an Etsy seller? (yes/no/maybe)
+2. Do they sell custom, personalized, or made-to-order products? (yes/no/unclear)
+3. Would they benefit from a tool that automates collecting custom order specs from buyers? (high/medium/low/none)
+4. What niche do they sell in? (jewelry, portraits, signs, wedding, clothing, home_decor, pet_products, stationery, leather, kids, other, unknown)
+
+POSTS:
+{chr(10).join(post_summaries)}
+
+RESPOND IN JSON — array of objects, one per post:
+[{{"post": 1, "is_seller": "yes", "does_custom": "yes", "etsai_fit": "high", "niche": "jewelry"}}, ...]
+
+Be strict: only mark "high" fit if they clearly do custom work and would genuinely benefit.
+JSON array only."""
+
+        try:
+            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=400)
+            clean = raw.strip()
+            if clean.startswith("```"):
+                clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
+            results = json.loads(clean)
+
+            for result in results:
+                idx = result.get("post", 0) - 1
+                if 0 <= idx < len(batch):
+                    post = batch[idx].copy()
+                    post["is_seller"] = result.get("is_seller", "no")
+                    post["does_custom"] = result.get("does_custom", "no")
+                    post["etsai_fit"] = result.get("etsai_fit", "none")
+                    post["niche"] = result.get("niche", "unknown")
+                    post["shop_urls"] = _extract_shop_urls(
+                        f"{post['title']} {post['body']}"
+                    )
+                    classified.append(post)
+
+            time.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Scout: batch classification error: {e}")
+            # On error, skip this batch rather than crash
+            continue
+
+    return classified
+
+
+def _dedup_and_save_leads(classified_posts):
+    """Save classified leads to DB, deduplicating by reddit username."""
+    leads_added = 0
+
+    for post in classified_posts:
+        # Only save sellers with medium+ ETSAI fit
+        if post.get("etsai_fit") in ("none", "low"):
+            continue
+        if post.get("is_seller") == "no":
+            continue
+
+        username = post["author"]
+        conn = get_conn()
+        try:
+            existing = conn.execute(
+                "SELECT id FROM growth_leads WHERE reddit_username = %s",
+                (username,)
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if existing:
+            continue
+
+        if get_lead_count_today("reddit") >= SCOUT_MAX_LEADS_PER_DAY:
+            logger.info("Scout: daily Reddit lead quota reached")
+            break
+
+        # Use first shop URL if found
+        shop_urls = post.get("shop_urls", [])
+        shop_url = shop_urls[0] if shop_urls else None
+
+        lead_id = add_growth_lead(
+            source="reddit",
+            shop_name=username,
+            shop_url=shop_url,
+            reddit_username=username,
+            niche=post.get("niche", "unknown"),
+            enrichment_data={
+                "subreddit": post["subreddit"],
+                "post_title": post["title"][:200],
+                "post_url": post["url"],
+                "etsai_fit": post.get("etsai_fit"),
+                "does_custom": post.get("does_custom"),
+                "shop_urls": shop_urls,
+                "flair": post.get("flair", ""),
+            },
+        )
+        if lead_id:
+            leads_added += 1
+
+    return leads_added
+
+
+def discover_reddit_leads(limit=25):
+    """AI-powered Reddit lead discovery.
+    1. Fetch ALL posts from seller subs (no keyword filter)
+    2. Search Reddit for sellers sharing their shops
+    3. Batch-classify with Claude: who's a real custom order seller?
+    4. Extract Etsy shop URLs from posts
+    5. Save qualified leads
+    """
+    start = time.time()
+
+    # Step 1: Fetch from seller-specific subreddits (everyone's a potential lead)
+    logger.info("Scout: Fetching posts from seller subreddits...")
+    seller_posts = _fetch_reddit_posts(SELLER_SUBREDDITS, limit=limit)
+
+    # Step 2: Fetch from general subreddits (more noise, fewer posts)
+    general_posts = _fetch_reddit_posts(GENERAL_SUBREDDITS, limit=max(limit // 2, 10))
+
+    # Step 3: Search Reddit for sellers actively sharing shops
+    logger.info("Scout: Searching Reddit for Etsy sellers...")
+    search_posts = _search_reddit_sellers(limit=8)
+
+    # Deduplicate by author before classification
+    seen_authors = set()
+    unique_posts = []
+    for post in seller_posts + general_posts + search_posts:
+        if post["author"] not in seen_authors:
+            seen_authors.add(post["author"])
+            unique_posts.append(post)
+
+    logger.info(f"Scout: {len(unique_posts)} unique posts to classify")
+
+    if not unique_posts:
+        duration_ms = int((time.time() - start) * 1000)
+        log_agent_action("scout", "discover_reddit", True,
+                         {"leads_added": 0, "posts_found": 0}, duration_ms=duration_ms)
+        return 0
+
+    # Step 4: AI classification — Claude decides who's a real lead
+    logger.info("Scout: Classifying posts with Claude...")
+    classified = _classify_leads_batch(unique_posts)
+
+    qualified = [p for p in classified if p.get("etsai_fit") in ("high", "medium")]
+    logger.info(f"Scout: {len(qualified)}/{len(classified)} posts qualified as leads")
+
+    # Step 5: Save to DB
+    leads_added = _dedup_and_save_leads(classified)
 
     duration_ms = int((time.time() - start) * 1000)
-    log_agent_action("scout", "discover_reddit", True,
-                     {"leads_added": leads_added}, duration_ms=duration_ms)
-    logger.info(f"Scout: Reddit — {leads_added} new leads from {len(subreddits)} subreddits")
+    log_agent_action("scout", "discover_reddit", True, {
+        "leads_added": leads_added,
+        "posts_fetched": len(unique_posts),
+        "posts_classified": len(classified),
+        "qualified": len(qualified),
+        "method": "ai_classification",
+    }, duration_ms=duration_ms)
+    logger.info(f"Scout: Reddit — {leads_added} new leads from {len(unique_posts)} posts (AI classified)")
     return leads_added
 
 
@@ -698,6 +952,92 @@ def get_daily_targets(budget=None):
 
 
 # =============================================================
+# SELF-LEARNING — NICHE PERFORMANCE
+# =============================================================
+
+def update_scout_learnings():
+    """Analyze which niches produce HOT leads and update learnings."""
+    if not LEARNING_ENABLED:
+        return
+
+    conn = get_conn()
+    try:
+        # Get niche stats
+        rows = conn.execute("""
+            SELECT niche,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN tier = 'HOT' THEN 1 ELSE 0 END) as hot,
+                   SUM(CASE WHEN tier = 'WARM' THEN 1 ELSE 0 END) as warm,
+                   SUM(CASE WHEN contact_status = 'responded' THEN 1 ELSE 0 END) as responded,
+                   SUM(CASE WHEN contact_status = 'converted' THEN 1 ELSE 0 END) as converted
+            FROM growth_leads
+            WHERE niche IS NOT NULL
+            GROUP BY niche
+        """).fetchall()
+    finally:
+        conn.close()
+
+    for row in rows:
+        r = dict(row)
+        niche = r["niche"]
+        total = r["total"]
+        if total == 0:
+            continue
+
+        hot_rate = (r["hot"] / total) * 100
+        response_rate = (r["responded"] / total) * 100 if total > 0 else 0
+        conversion_rate = (r["converted"] / total) * 100 if total > 0 else 0
+
+        # Score = weighted combination of hot rate and response rate
+        score = hot_rate * 0.5 + response_rate * 0.3 + conversion_rate * 0.2
+        confidence = min(total / 20, 1.0)  # Full confidence at 20 samples
+
+        upsert_learning(
+            agent="scout",
+            learning_type="niche_performance",
+            key=niche,
+            value_json={
+                "hot_rate": round(hot_rate, 1),
+                "response_rate": round(response_rate, 1),
+                "conversion_rate": round(conversion_rate, 1),
+                "total_leads": total,
+            },
+            score=round(score, 2),
+            sample_size=total,
+            confidence=round(confidence, 2),
+        )
+
+    logger.info(f"Scout: Updated learnings for {len(rows)} niches")
+
+
+def get_smart_niches(max_niches=3):
+    """Pick niches based on learnings: top performers + 1 untested for exploration."""
+    if not LEARNING_ENABLED:
+        return list(NICHE_QUERIES.keys())[:max_niches]
+
+    top = get_top_learnings("scout", "niche_performance", limit=max_niches, min_sample=3)
+    tested_niches = {l["key"] for l in get_learnings(agent="scout", learning_type="niche_performance")}
+
+    # Top performers
+    smart_niches = [l["key"] for l in top if l["key"] in NICHE_QUERIES]
+
+    # Add exploration niche(s)
+    untested = [n for n in NICHE_QUERIES if n not in tested_niches]
+    explore_count = max(1, int(max_niches * LEARNING_EXPLORATION_RATE))
+
+    if untested:
+        explore_picks = random.sample(untested, min(explore_count, len(untested)))
+        smart_niches.extend(explore_picks)
+
+    # Fill remaining slots with defaults if needed
+    if len(smart_niches) < max_niches:
+        remaining = [n for n in NICHE_QUERIES if n not in smart_niches]
+        smart_niches.extend(remaining[:max_niches - len(smart_niches)])
+
+    return smart_niches[:max_niches]
+
+
+# =============================================================
 # MAIN RUN
 # =============================================================
 
@@ -709,7 +1049,7 @@ def run(niches=None):
 
     start = time.time()
     if niches is None:
-        niches = list(NICHE_QUERIES.keys())[:3]  # Top 3 niches per run
+        niches = get_smart_niches(max_niches=3)
 
     total_leads = 0
 
@@ -722,6 +1062,13 @@ def run(niches=None):
 
     # Score unscored leads
     scored = score_unscored_leads(limit=30)
+
+    # Update learnings after discovery
+    if LEARNING_ENABLED:
+        try:
+            update_scout_learnings()
+        except Exception as e:
+            logger.error(f"Scout learning update error: {e}")
 
     duration_ms = int((time.time() - start) * 1000)
     result = {

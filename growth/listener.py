@@ -5,20 +5,28 @@ Uses Claude for thread classification and reply drafting.
 """
 import json
 import logging
+import random
 import time
 from datetime import datetime
+from pathlib import Path
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path, override=True)
+
 from ai_engine import call_claude, AI_MODEL_CHEAP, AI_MODEL_SMART
 from growth.growth_db import (
     add_growth_message, log_agent_action, add_content,
+    upsert_learning, get_top_learnings, get_learnings,
 )
 from growth.growth_config import (
     REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET,
     REDDIT_TARGET_SUBREDDITS, REDDIT_KEYWORDS,
     CHANNEL_REDDIT,
+    LEARNING_ENABLED, LEARNING_EXPLORATION_RATE,
 )
 
 logger = logging.getLogger("etsai.growth.listener")
@@ -45,63 +53,84 @@ def _get_reddit():
             user_agent=os.getenv("REDDIT_USER_AGENT", "ETSAI-GrowthBot/1.0"),
         )
     except ImportError:
-        logger.warning("PRAW not installed — Listener requires it for Reddit monitoring")
+        logger.warning("PRAW not installed — will try JSON fallback")
         return None
     except Exception as e:
         logger.error(f"Reddit connection error: {e}")
         return None
 
 
-def scan_reddit(subreddits=None, keywords=None, since_hours=6, limit=25):
-    """
-    Fetch recent posts matching keywords from target subreddits.
-    Returns list of thread dicts with title, body, url, subreddit, author.
-    """
-    reddit = _get_reddit()
-    if not reddit:
-        return []
+def _scan_reddit_json(subreddits, since_hours=6, limit=25):
+    """Fetch ALL recent posts from subreddits — no keyword filter.
+    Claude will decide what's relevant downstream."""
+    import requests
 
-    if not subreddits:
-        subreddits = REDDIT_TARGET_SUBREDDITS
-    if not keywords:
-        keywords = REDDIT_KEYWORDS
-
-    keyword_set = set(kw.lower() for kw in keywords)
     threads = []
     cutoff = time.time() - (since_hours * 3600)
+    headers = {"User-Agent": "ETSAI-GrowthBot/1.0"}
 
     for sub_name in subreddits:
         try:
-            subreddit = reddit.subreddit(sub_name)
-            for post in subreddit.new(limit=limit):
-                if post.created_utc < cutoff:
-                    continue
-                if post.id in _seen_threads:
+            url = f"https://www.reddit.com/r/{sub_name}/new.json?limit={limit}"
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                logger.warning(f"Listener: Reddit JSON r/{sub_name} returned {resp.status_code}")
+                time.sleep(2)
+                continue
+
+            data = resp.json()
+            posts = data.get("data", {}).get("children", [])
+
+            for post_wrapper in posts:
+                post = post_wrapper.get("data", {})
+                created_utc = post.get("created_utc", 0)
+                if created_utc < cutoff:
                     continue
 
-                text = f"{post.title} {post.selftext}".lower()
-                matched_keywords = [kw for kw in keyword_set if kw in text]
-                if not matched_keywords:
+                post_id = post.get("id", "")
+                if post_id in _seen_threads:
                     continue
 
-                _seen_threads.add(post.id)
+                author = post.get("author")
+                if not author or author in ("[deleted]", "AutoModerator"):
+                    continue
+
+                _seen_threads.add(post_id)
+                permalink = post.get("permalink", "")
+
                 threads.append({
-                    "id": post.id,
+                    "id": post_id,
                     "subreddit": sub_name,
-                    "title": post.title,
-                    "body": post.selftext[:1000],
-                    "url": f"https://reddit.com{post.permalink}",
-                    "author": str(post.author) if post.author else None,
-                    "score": post.score,
-                    "num_comments": post.num_comments,
-                    "created_utc": post.created_utc,
-                    "matched_keywords": matched_keywords,
+                    "title": post.get("title", ""),
+                    "body": (post.get("selftext") or "")[:1000],
+                    "url": f"https://reddit.com{permalink}",
+                    "author": author,
+                    "score": post.get("score", 0),
+                    "num_comments": post.get("num_comments", 0),
+                    "created_utc": created_utc,
                 })
 
-        except Exception as e:
-            logger.error(f"Listener: Error scanning r/{sub_name}: {e}")
+            time.sleep(2)
 
-    logger.info(f"Listener: Scanned {len(subreddits)} subreddits, found {len(threads)} relevant threads")
+        except Exception as e:
+            logger.error(f"Listener: Reddit JSON error on r/{sub_name}: {e}")
+
+    return threads
+
+
+def scan_reddit(subreddits=None, since_hours=6, limit=25):
+    """
+    Fetch ALL recent posts from target subreddits.
+    No keyword pre-filter — Claude classifies everything downstream.
+    """
+    if not subreddits:
+        subreddits = REDDIT_TARGET_SUBREDDITS
+
+    logger.info("Listener: PRAW unavailable, using Reddit JSON fallback")
+    threads = _scan_reddit_json(subreddits, since_hours, limit)
+    method = "json"
+
+    logger.info(f"Listener: Scanned {len(subreddits)} subreddits ({method}), found {len(threads)} relevant threads")
     return threads
 
 
@@ -288,6 +317,109 @@ def get_engagement_queue():
 
 
 # =============================================================
+# SELF-LEARNING — SUBREDDIT & KEYWORD QUALITY
+# =============================================================
+
+def update_listener_learnings(classified_threads):
+    """Track subreddit relevance rates and keyword quality from classification results."""
+    if not LEARNING_ENABLED or not classified_threads:
+        return
+
+    # Aggregate by subreddit
+    sub_stats = {}
+    for t in classified_threads:
+        sub = t.get("subreddit", "unknown")
+        if sub not in sub_stats:
+            sub_stats[sub] = {"total": 0, "relevant": 0, "maybe": 0}
+        sub_stats[sub]["total"] += 1
+        if t.get("relevance") == "relevant":
+            sub_stats[sub]["relevant"] += 1
+        elif t.get("relevance") == "maybe":
+            sub_stats[sub]["maybe"] += 1
+
+    for sub, stats in sub_stats.items():
+        total = stats["total"]
+        if total == 0:
+            continue
+        relevance_rate = ((stats["relevant"] + stats["maybe"] * 0.5) / total) * 100
+        confidence = min(total / 10, 1.0)
+        upsert_learning(
+            agent="listener",
+            learning_type="subreddit_quality",
+            key=sub,
+            value_json={
+                "relevance_rate": round(relevance_rate, 1),
+                "relevant": stats["relevant"],
+                "maybe": stats["maybe"],
+                "total": total,
+            },
+            score=round(relevance_rate, 2),
+            sample_size=total,
+            confidence=round(confidence, 2),
+        )
+
+    # Aggregate by keyword
+    kw_stats = {}
+    for t in classified_threads:
+        for kw in t.get("matched_keywords", []):
+            if kw not in kw_stats:
+                kw_stats[kw] = {"total": 0, "relevant": 0}
+            kw_stats[kw]["total"] += 1
+            if t.get("relevance") == "relevant":
+                kw_stats[kw]["relevant"] += 1
+
+    for kw, stats in kw_stats.items():
+        total = stats["total"]
+        if total == 0:
+            continue
+        hit_rate = (stats["relevant"] / total) * 100
+        confidence = min(total / 5, 1.0)
+        upsert_learning(
+            agent="listener",
+            learning_type="keyword_quality",
+            key=kw,
+            value_json={
+                "hit_rate": round(hit_rate, 1),
+                "relevant": stats["relevant"],
+                "total": total,
+            },
+            score=round(hit_rate, 2),
+            sample_size=total,
+            confidence=round(confidence, 2),
+        )
+
+    logger.info(f"Listener: Updated learnings for {len(sub_stats)} subreddits, {len(kw_stats)} keywords")
+
+
+def _get_smart_subreddits(max_subs=None):
+    """Pick subreddits based on learnings: top quality + exploration of untested ones."""
+    if not LEARNING_ENABLED:
+        return REDDIT_TARGET_SUBREDDITS
+
+    if max_subs is None:
+        max_subs = len(REDDIT_TARGET_SUBREDDITS)
+
+    top = get_top_learnings("listener", "subreddit_quality", limit=max_subs, min_sample=3)
+    tested = {l["key"] for l in get_learnings(agent="listener", learning_type="subreddit_quality")}
+
+    smart_subs = [l["key"] for l in top]
+
+    # Add untested subreddits for exploration
+    untested = [s for s in REDDIT_TARGET_SUBREDDITS if s not in tested]
+    explore_count = max(1, int(max_subs * LEARNING_EXPLORATION_RATE))
+    if untested:
+        explore_picks = random.sample(untested, min(explore_count, len(untested)))
+        smart_subs.extend(explore_picks)
+
+    # Fill with defaults
+    if len(smart_subs) < max_subs:
+        remaining = [s for s in REDDIT_TARGET_SUBREDDITS if s not in smart_subs]
+        smart_subs.extend(remaining[:max_subs - len(smart_subs)])
+
+    return smart_subs[:max_subs]
+
+
+# =============================================================
 # MAIN RUN
 # =============================================================
 
@@ -307,7 +439,8 @@ def run():
 
     # Scan Reddit
     if CHANNEL_REDDIT:
-        threads = scan_reddit()
+        smart_subs = _get_smart_subreddits()
+        threads = scan_reddit(subreddits=smart_subs)
         result["threads_found"] = len(threads)
 
         if threads:
@@ -315,6 +448,13 @@ def run():
             classified = classify_threads(threads)
             relevant = [t for t in classified if t.get("relevance") == "relevant"]
             result["relevant"] = len(relevant)
+
+            # Update learnings after classification
+            if LEARNING_ENABLED:
+                try:
+                    update_listener_learnings(classified)
+                except Exception as e:
+                    logger.error(f"Listener learning update error: {e}")
 
             # Draft replies for relevant threads
             from growth.writer import draft_reddit_reply

@@ -5,7 +5,7 @@ Loads from env vars with sensible defaults. All quotas are daily limits.
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 # =============================================================
@@ -73,7 +73,11 @@ REDDIT_KEYWORDS = [
     "custom order", "custom orders", "intake form", "order details",
     "collect specs", "buyer information", "personalized order",
     "order management", "etsy messages", "etsy communication",
-    "client questionnaire", "order form",
+    "client questionnaire", "order form", "commission",
+    "made to order", "personalized", "bespoke", "custom work",
+    "engraving", "monogram", "handmade", "etsy shop", "etsy seller",
+    "small business", "how do you collect", "buyer details",
+    "customize", "specification", "questionnaire",
 ]
 
 # =============================================================
@@ -110,6 +114,13 @@ SCHEDULE_SCOUT_MINS = int(os.environ.get("GROWTH_SCHED_SCOUT", "360"))
 SCHEDULE_LISTENER_MINS = int(os.environ.get("GROWTH_SCHED_LISTENER", "30"))
 SCHEDULE_CREATOR_MINS = int(os.environ.get("GROWTH_SCHED_CREATOR", "720"))
 SCHEDULE_WRITER_MINS = int(os.environ.get("GROWTH_SCHED_WRITER", "120"))
+
+# =============================================================
+# SELF-LEARNING
+# =============================================================
+
+LEARNING_ENABLED = os.environ.get("GROWTH_LEARNING_ENABLED", "1") == "1"
+LEARNING_EXPLORATION_RATE = float(os.environ.get("GROWTH_LEARNING_EXPLORATION_RATE", "0.20"))
 
 # =============================================================
 # KILL SWITCH
@@ -154,4 +165,6 @@ def get_config_summary():
         "reddit_configured": bool(REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET),
         "youtube_configured": bool(YOUTUBE_CLIENT_SECRETS_FILE),
         "tts_engine": TTS_ENGINE,
+        "learning_enabled": LEARNING_ENABLED,
+        "learning_exploration_rate": LEARNING_EXPLORATION_RATE,
     }

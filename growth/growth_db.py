@@ -152,6 +152,21 @@ def _init_growth_sqlite(conn):
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS growth_learnings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent TEXT NOT NULL,
+            learning_type TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value_json TEXT DEFAULT '{}',
+            score REAL DEFAULT 0,
+            sample_size INTEGER DEFAULT 0,
+            confidence REAL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     _create_growth_indexes(conn)
 
 
@@ -257,6 +272,21 @@ def _init_growth_pg(conn):
     """)
 
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS growth_learnings (
+            id SERIAL PRIMARY KEY,
+            agent TEXT NOT NULL,
+            learning_type TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value_json TEXT DEFAULT '{}',
+            score REAL DEFAULT 0,
+            sample_size INTEGER DEFAULT 0,
+            confidence REAL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS growth_metrics (
             id SERIAL PRIMARY KEY,
             date TEXT NOT NULL,
@@ -291,6 +321,9 @@ def _create_growth_indexes(conn):
         "CREATE INDEX IF NOT EXISTS idx_gco_status ON growth_content(status)",
         "CREATE INDEX IF NOT EXISTS idx_gal_agent ON growth_agent_log(agent)",
         "CREATE INDEX IF NOT EXISTS idx_gme_date ON growth_metrics(date)",
+        "CREATE INDEX IF NOT EXISTS idx_glrn_agent ON growth_learnings(agent)",
+        "CREATE INDEX IF NOT EXISTS idx_glrn_type ON growth_learnings(learning_type)",
+        "CREATE INDEX IF NOT EXISTS idx_glrn_lookup ON growth_learnings(agent, learning_type, key)",
     ]
     for sql in indexes:
         conn.execute(sql)
@@ -910,6 +943,7 @@ def get_growth_overview():
 
         messages_total = conn.execute("SELECT COUNT(*) as c FROM growth_messages WHERE status = 'sent'").fetchone()["c"]
         messages_replied = conn.execute("SELECT COUNT(*) as c FROM growth_messages WHERE status = 'replied'").fetchone()["c"]
+        messages_pending = conn.execute("SELECT COUNT(*) as c FROM growth_messages WHERE review_status = 'pending'").fetchone()["c"]
 
         videos_total = conn.execute("SELECT COUNT(*) as c FROM growth_content WHERE content_type = 'video' AND status = 'published'").fetchone()["c"]
         video_views = conn.execute("SELECT COALESCE(SUM(views), 0) as c FROM growth_content WHERE content_type = 'video'").fetchone()["c"]
@@ -930,6 +964,7 @@ def get_growth_overview():
             "leads_converted": leads_converted,
             "messages_total": messages_total,
             "messages_replied": messages_replied,
+            "messages_pending": messages_pending,
             "videos_total": videos_total,
             "video_views": video_views,
             "leads_today": leads_today,
@@ -957,5 +992,92 @@ def get_lead_funnel():
             ).fetchone()
             funnel[status] = row["c"]
         return funnel
+    finally:
+        conn.close()
+
+
+# =============================================================
+# LEARNINGS CRUD
+# =============================================================
+
+def upsert_learning(agent, learning_type, key, value_json, score=0,
+                    sample_size=0, confidence=0):
+    """Insert or update a learning record. Keyed on (agent, learning_type, key)."""
+    conn = get_conn()
+    try:
+        existing = conn.execute(
+            "SELECT id FROM growth_learnings WHERE agent = %s AND learning_type = %s AND key = %s",
+            (agent, learning_type, key)
+        ).fetchone()
+        now = datetime.now().isoformat()
+        if existing:
+            conn.execute("""
+                UPDATE growth_learnings
+                SET value_json = %s, score = %s, sample_size = %s,
+                    confidence = %s, updated_at = %s
+                WHERE id = %s
+            """, (json.dumps(value_json) if not isinstance(value_json, str) else value_json,
+                  score, sample_size, confidence, now, existing["id"]))
+        else:
+            conn.execute("""
+                INSERT INTO growth_learnings
+                (agent, learning_type, key, value_json, score, sample_size, confidence)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (agent, learning_type, key,
+                  json.dumps(value_json) if not isinstance(value_json, str) else value_json,
+                  score, sample_size, confidence))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_learnings(agent=None, learning_type=None, min_confidence=0):
+    """Get learnings filtered by agent and/or type."""
+    conn = get_conn()
+    try:
+        conditions = ["confidence >= %s"]
+        params = [min_confidence]
+        if agent:
+            conditions.append("agent = %s")
+            params.append(agent)
+        if learning_type:
+            conditions.append("learning_type = %s")
+            params.append(learning_type)
+        where = " AND ".join(conditions)
+        rows = conn.execute(
+            f"SELECT * FROM growth_learnings WHERE {where} ORDER BY score DESC",
+            params
+        ).fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["value_json"] = json.loads(d.get("value_json") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                pass
+            results.append(d)
+        return results
+    finally:
+        conn.close()
+
+
+def get_top_learnings(agent, learning_type, limit=10, min_sample=3):
+    """Get top-scoring learnings for an agent/type with minimum sample size."""
+    conn = get_conn()
+    try:
+        rows = conn.execute("""
+            SELECT * FROM growth_learnings
+            WHERE agent = %s AND learning_type = %s AND sample_size >= %s
+            ORDER BY score DESC LIMIT %s
+        """, (agent, learning_type, min_sample, limit)).fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["value_json"] = json.loads(d.get("value_json") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                pass
+            results.append(d)
+        return results
     finally:
         conn.close()
