@@ -454,7 +454,7 @@ def _classify_leads_batch(posts):
     Returns list of posts with classification added."""
 
     classified = []
-    batch_size = 8
+    batch_size = 4
 
     for i in range(0, len(posts), batch_size):
         batch = posts[i:i + batch_size]
@@ -484,7 +484,7 @@ Be strict: only mark "high" fit if they clearly do custom work and would genuine
 JSON array only."""
 
         try:
-            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=400)
+            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=800)
             clean = raw.strip()
             if clean.startswith("```"):
                 clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
