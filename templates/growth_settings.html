@@ -1,0 +1,187 @@
+{% extends "_base.html" %}
+
+{% block title %}Growth Settings — ETSAI{% endblock %}
+
+{% block extra_styles %}
+    .settings-card {
+        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+    }
+    .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; }
+    .toggle-label { font-size: 0.875rem; font-weight: 500; }
+    .toggle-desc { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 2px; }
+    .toggle-switch {
+        width: 44px; height: 24px; border-radius: 12px; cursor: pointer;
+        transition: background 0.2s; position: relative;
+        background: var(--surface-3);
+    }
+    .toggle-switch.on { background: var(--brand); }
+    .toggle-switch::after {
+        content: ''; position: absolute; width: 18px; height: 18px;
+        border-radius: 50%; background: white; top: 3px; left: 3px;
+        transition: transform 0.2s;
+    }
+    .toggle-switch.on::after { transform: translateX(20px); }
+    .quota-input {
+        width: 80px; padding: 0.375rem 0.5rem; border-radius: 8px; text-align: center;
+        font-size: 0.875rem; font-weight: 600;
+        background: var(--surface-1); border: 1px solid var(--border-default);
+        color: var(--text-primary);
+    }
+    .quota-input:focus { outline: none; border-color: var(--brand); }
+{% endblock %}
+
+{% block body %}
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar">
+        <div class="p-5 pb-3">
+            <a href="/dashboard" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        </div>
+        <nav class="flex-1 py-2">
+            <a href="/dashboard" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                Dashboard
+            </a>
+            <a href="/growth" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
+                Growth
+            </a>
+            <a href="/growth/settings" class="sidebar-nav-item active">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+                Growth Config
+            </a>
+            <a href="/settings" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Settings
+            </a>
+        </nav>
+        <div class="p-4 border-t" style="border-color: var(--border-default);">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white" style="background: linear-gradient(135deg, #4a6741, #5c7d52);">{{ (seller.shop_name or 'S')[0] }}</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ seller.shop_name or 'My Shop' }}</p>
+                </div>
+            </div>
+            <a href="/logout" class="text-xs font-medium no-underline" style="color: var(--text-tertiary);">Log out</a>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <div class="md:hidden sticky top-0 z-30 border-b px-4 h-14 flex items-center gap-3" style="background: var(--surface-0); border-color: var(--border-default);">
+            <button onclick="toggleSidebar()" class="p-1.5"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg></button>
+            <span class="text-lg font-extrabold">Growth Config</span>
+        </div>
+
+        <div class="p-6 md:p-8 max-w-3xl mx-auto">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <div class="mb-4 p-3 rounded-lg text-sm font-medium {% if category == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">{{ message }}</div>
+            {% endfor %}
+            {% endwith %}
+
+            <h1 class="text-xl font-bold mb-6" style="color: var(--text-primary);">Growth Bot Configuration</h1>
+
+            <form method="POST" action="/growth/settings">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Kill Switch -->
+                <div class="card settings-card p-5 mb-5">
+                    <h2 class="text-base font-bold mb-3 text-center" style="color: var(--text-primary);">System Control</h2>
+                    <div class="toggle-wrapper">
+                        <div>
+                            <div class="toggle-label" style="color: var(--text-primary);">Growth System</div>
+                            <div class="toggle-desc">Master on/off switch for all growth agents</div>
+                        </div>
+                        <label>
+                            <input type="checkbox" name="growth_enabled" value="1" {% if config.growth_enabled %}checked{% endif %} class="hidden">
+                            <div class="toggle-switch {% if config.growth_enabled %}on{% endif %}" onclick="this.classList.toggle('on'); this.previousElementSibling.checked = this.classList.contains('on');"></div>
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <label class="text-sm font-medium" style="color: var(--text-primary);">Daily Budget Cap ($)</label>
+                        <input type="number" name="daily_budget" value="{{ config.daily_budget }}" step="0.50" min="0" max="50" class="quota-input mt-1">
+                    </div>
+                </div>
+
+                <!-- Channel Toggles -->
+                <div class="card settings-card p-5 mb-5">
+                    <h2 class="text-base font-bold mb-3 text-center" style="color: var(--text-primary);">Channels</h2>
+                    {% for channel_key, channel_label in [('email', 'Email Outreach'), ('reddit', 'Reddit'), ('youtube', 'YouTube Shorts'), ('tiktok', 'TikTok'), ('instagram', 'Instagram')] %}
+                    <div class="toggle-wrapper {% if not loop.last %}border-b{% endif %}" style="border-color: var(--border-subtle);">
+                        <div>
+                            <div class="toggle-label" style="color: var(--text-primary);">{{ channel_label }}</div>
+                        </div>
+                        <label>
+                            <input type="checkbox" name="channel_{{ channel_key }}" value="1" {% if config.channels[channel_key] %}checked{% endif %} class="hidden">
+                            <div class="toggle-switch {% if config.channels[channel_key] %}on{% endif %}" onclick="this.classList.toggle('on'); this.previousElementSibling.checked = this.classList.contains('on');"></div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Quotas -->
+                <div class="card settings-card p-5 mb-5">
+                    <h2 class="text-base font-bold mb-3 text-center" style="color: var(--text-primary);">Daily Quotas</h2>
+                    <div class="space-y-3">
+                        {% for quota_key, quota_label, quota_value in [
+                            ('scout_leads', 'Scout: Max leads/day', config.quotas.scout_leads),
+                            ('writer_emails', 'Writer: Max emails/day', config.quotas.writer_emails),
+                            ('writer_reddit', 'Writer: Max Reddit posts/day', config.quotas.writer_reddit),
+                            ('writer_dms', 'Writer: Max DMs/day', config.quotas.writer_dms),
+                            ('creator_videos', 'Creator: Max videos/day', config.quotas.creator_videos),
+                        ] %}
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm" style="color: var(--text-primary);">{{ quota_label }}</label>
+                            <input type="number" name="quota_{{ quota_key }}" value="{{ quota_value }}" min="0" max="500" class="quota-input">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Review Queue -->
+                <div class="card settings-card p-5 mb-5">
+                    <h2 class="text-base font-bold mb-3 text-center" style="color: var(--text-primary);">Review Queue</h2>
+                    <p class="text-xs mb-3" style="color: var(--text-tertiary);">When ON, messages go to review queue before sending. When OFF, they auto-send.</p>
+                    {% for queue_key, queue_label in [('reddit', 'Reddit posts & replies'), ('email', 'Email outreach'), ('video', 'Video content')] %}
+                    <div class="toggle-wrapper {% if not loop.last %}border-b{% endif %}" style="border-color: var(--border-subtle);">
+                        <div>
+                            <div class="toggle-label" style="color: var(--text-primary);">{{ queue_label }}</div>
+                        </div>
+                        <label>
+                            <input type="checkbox" name="review_{{ queue_key }}" value="1" {% if config.review_queue[queue_key] %}checked{% endif %} class="hidden">
+                            <div class="toggle-switch {% if config.review_queue[queue_key] %}on{% endif %}" onclick="this.classList.toggle('on'); this.previousElementSibling.checked = this.classList.contains('on');"></div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- API Status -->
+                <div class="card settings-card p-5 mb-5">
+                    <h2 class="text-base font-bold mb-3 text-center" style="color: var(--text-primary);">API Status</h2>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span style="color: var(--text-primary);">Reddit API</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded {% if config.reddit_configured %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+                                {{ 'Connected' if config.reddit_configured else 'Not configured' }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span style="color: var(--text-primary);">YouTube API</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded {% if config.youtube_configured %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+                                {{ 'Connected' if config.youtube_configured else 'Not configured' }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span style="color: var(--text-primary);">TTS Engine</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{{ config.tts_engine }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button type="submit" class="btn-primary px-8 py-2.5 text-sm font-semibold">Save Configuration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

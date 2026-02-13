@@ -174,6 +174,14 @@ def validate_session():
 # Initialize database on startup
 init_db()
 
+# Initialize growth tables
+try:
+    from growth.growth_db import init_growth_tables
+    init_growth_tables()
+    logger.info("Growth tables initialized")
+except Exception as e:
+    logger.warning("Growth tables init skipped: %s", e)
+
 
 # =============================================================
 # SELLER DASHBOARD
@@ -1523,12 +1531,228 @@ def admin_panel():
 
 
 # =============================================================
+# GROWTH BOT
+# =============================================================
+
+@app.route("/growth")
+def growth_dashboard():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    from growth.growth_db import (
+        get_growth_overview, get_lead_funnel, get_agent_log,
+        get_agent_stats as get_growth_agent_stats, get_last_agent_run,
+        get_review_queue, get_content_by_status, get_leads_by_tier,
+        get_etsy_outreach_queue,
+    )
+    from growth.growth_config import get_config_summary
+
+    overview = get_growth_overview()
+    funnel = get_lead_funnel()
+    config = get_config_summary()
+    review_queue = get_review_queue(limit=15)
+    agent_log = get_agent_log(limit=25)
+    content = get_content_by_status("published", limit=10)
+    hot_leads = get_leads_by_tier("HOT", limit=10)
+    etsy_queue = get_etsy_outreach_queue(limit=15)
+
+    # Agent status
+    agents = {}
+    for agent_name in ["scout", "writer", "listener", "creator", "commander"]:
+        stats = get_growth_agent_stats(agent_name, since_hours=24)
+        last = get_last_agent_run(agent_name)
+        agents[agent_name] = {
+            "actions_24h": stats.get("actions", 0),
+            "cost_24h": stats.get("total_cost", 0) or 0,
+            "last_run": str(last.get("created_at", ""))[:16] if last else "",
+            "error_count": (stats.get("actions", 0) or 0) - (stats.get("successes", 0) or 0),
+        }
+
+    return render_template("growth_dashboard.html",
+                           seller=seller, overview=overview, funnel=funnel,
+                           config=config, agents=agents, review_queue=review_queue,
+                           agent_log=agent_log, content=content,
+                           hot_leads=hot_leads, etsy_queue=etsy_queue)
+
+
+@app.route("/growth/settings", methods=["GET", "POST"])
+def growth_settings():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    if request.method == "POST":
+        # Save settings to env-compatible store (settings JSON on seller for now)
+        growth_settings_data = {
+            "growth_enabled": "1" if request.form.get("growth_enabled") else "0",
+            "daily_budget": request.form.get("daily_budget", "5.00"),
+            "channel_email": "1" if request.form.get("channel_email") else "0",
+            "channel_reddit": "1" if request.form.get("channel_reddit") else "0",
+            "channel_youtube": "1" if request.form.get("channel_youtube") else "0",
+            "channel_tiktok": "1" if request.form.get("channel_tiktok") else "0",
+            "channel_instagram": "1" if request.form.get("channel_instagram") else "0",
+            "quota_scout_leads": request.form.get("quota_scout_leads", "200"),
+            "quota_writer_emails": request.form.get("quota_writer_emails", "50"),
+            "quota_writer_reddit": request.form.get("quota_writer_reddit", "10"),
+            "quota_writer_dms": request.form.get("quota_writer_dms", "20"),
+            "quota_creator_videos": request.form.get("quota_creator_videos", "2"),
+            "review_reddit": "1" if request.form.get("review_reddit") else "0",
+            "review_email": "1" if request.form.get("review_email") else "0",
+            "review_video": "1" if request.form.get("review_video") else "0",
+        }
+        update_seller_settings(seller_id, {"growth": growth_settings_data})
+
+        # Update env vars for the running process
+        for key, val in growth_settings_data.items():
+            env_key = f"GROWTH_{key.upper()}"
+            os.environ[env_key] = val
+
+        flash("Growth settings saved", "success")
+        return redirect(url_for("growth_settings"))
+
+    from growth.growth_config import get_config_summary
+    config = get_config_summary()
+    return render_template("growth_settings.html", seller=seller, config=config)
+
+
+@app.route("/growth/trigger", methods=["POST"])
+def growth_trigger():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    agent = request.form.get("agent", "commander")
+    try:
+        if agent == "commander":
+            from growth.commander import run_cycle
+            result = run_cycle()
+        elif agent == "scout":
+            from growth.scout import run as scout_run
+            result = scout_run()
+        elif agent == "writer":
+            from growth.writer import run as writer_run
+            result = writer_run()
+        elif agent == "listener":
+            from growth.listener import run as listener_run
+            result = listener_run()
+        elif agent == "creator":
+            from growth.creator import run as creator_run
+            result = creator_run()
+        else:
+            flash(f"Unknown agent: {agent}", "error")
+            return redirect(url_for("growth_dashboard"))
+
+        flash(f"{agent.title()} cycle complete: {json.dumps(result, default=str)[:200]}", "success")
+    except Exception as e:
+        logger.error("Growth trigger error: %s", e)
+        flash(f"Error running {agent}: {str(e)[:200]}", "error")
+
+    return redirect(url_for("growth_dashboard"))
+
+
+@app.route("/growth/review", methods=["POST"])
+def growth_review():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    msg_id = request.form.get("msg_id")
+    content_id = request.form.get("content_id")
+    action = request.form.get("action")
+
+    if action not in ("approve", "reject", "mark_sent"):
+        flash("Invalid review action", "error")
+        return redirect(url_for("growth_dashboard"))
+
+    # Handle content (video) review
+    if content_id:
+        from growth.growth_db import update_content_status, get_content
+        if action == "approve":
+            update_content_status(content_id, "ready")
+            # Trigger YouTube upload
+            content_item = get_content(content_id)
+            if content_item and content_item.get("media_path"):
+                try:
+                    from growth.video_engine import upload_to_youtube
+                    upload_result = upload_to_youtube(
+                        video_path=content_item["media_path"],
+                        title=content_item.get("title", "ETSAI Tip"),
+                        description=content_item.get("body", ""),
+                        tags=["etsy", "customorders", "smallbusiness"],
+                    )
+                    if upload_result:
+                        update_content_status(
+                            content_id, "published",
+                            platform_post_id=upload_result.get("video_id"),
+                            platform_url=upload_result.get("url"),
+                        )
+                        flash("Video approved and uploaded to YouTube", "success")
+                    else:
+                        flash("Video approved but upload failed — marked as ready", "success")
+                except Exception as e:
+                    logger.error("Video upload error: %s", e)
+                    flash(f"Video approved but upload error: {str(e)[:100]}", "error")
+            else:
+                flash("Video approved", "success")
+        else:
+            update_content_status(content_id, "rejected")
+            flash("Video rejected", "success")
+        return redirect(url_for("growth_dashboard"))
+
+    # Handle message review
+    if not msg_id:
+        flash("Invalid review action", "error")
+        return redirect(url_for("growth_dashboard"))
+
+    from growth.growth_db import update_message_status
+    if action == "approve":
+        update_message_status(msg_id, "queued", review_status="approved")
+        flash("Message approved and queued for sending", "success")
+    elif action == "mark_sent":
+        update_message_status(msg_id, "sent", review_status="approved")
+        # Also update lead contact status
+        from growth.growth_db import get_growth_lead
+        from growth.growth_db import update_lead_status as update_growth_lead_status
+        conn = None
+        try:
+            from growth.growth_db import get_conn as get_growth_conn
+            conn = get_growth_conn()
+            row = conn.execute("SELECT lead_id FROM growth_messages WHERE id = %s", (msg_id,)).fetchone()
+            if row and row["lead_id"]:
+                update_growth_lead_status(row["lead_id"], "contacted")
+        except Exception:
+            pass
+        finally:
+            if conn:
+                conn.close()
+        flash("Message marked as sent", "success")
+    else:
+        update_message_status(msg_id, "rejected", review_status="rejected")
+        flash("Message rejected", "success")
+
+    return redirect(url_for("growth_dashboard"))
+
+
+# =============================================================
 # SEO
 # =============================================================
 
 @app.route("/robots.txt")
 def robots_txt():
-    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
+    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /growth\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
     return Response(content, mimetype="text/plain")
 
 
@@ -1814,6 +2038,17 @@ def health():
 # =============================================================
 # RUN
 # =============================================================
+
+# Initialize growth scheduler (only in production, not in debug reloader)
+if not os.environ.get("WERKZEUG_RUN_MAIN") and os.environ.get("GROWTH_ENABLED", "0") == "1":
+    try:
+        from growth.growth_scheduler import init_scheduler
+        _growth_scheduler = init_scheduler(app)
+        if _growth_scheduler:
+            logger.info("Growth scheduler running")
+    except Exception as e:
+        logger.warning("Growth scheduler init skipped: %s", e)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

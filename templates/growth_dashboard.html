@@ -1,0 +1,406 @@
+{% extends "_base.html" %}
+
+{% block title %}Growth Dashboard — ETSAI{% endblock %}
+
+{% block extra_styles %}
+    .welcome-banner {
+        background: linear-gradient(135deg, rgba(74,103,65,0.06) 0%, rgba(217,119,6,0.04) 100%);
+        border: 1px solid rgba(74,103,65,0.12);
+        border-radius: 0;
+        padding: 1.5rem;
+        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px);
+    }
+    html.dark .welcome-banner {
+        background: linear-gradient(135deg, rgba(107,148,96,0.08) 0%, rgba(245,158,11,0.04) 100%);
+        border-color: rgba(107,148,96,0.15);
+    }
+    .stat-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .funnel-bar {
+        height: 28px; border-radius: 6px; transition: width 0.5s ease;
+        display: flex; align-items: center; padding: 0 0.75rem;
+        font-size: 0.75rem; font-weight: 600; color: white; min-width: 40px;
+    }
+    .agent-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .agent-dot.running { background: #22c55e; animation: pulse 2s infinite; }
+    .agent-dot.idle { background: var(--text-tertiary); }
+    .agent-dot.error { background: #ef4444; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .log-entry {
+        padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.8rem;
+        border-left: 3px solid var(--brand);
+    }
+    .log-entry.error { border-left-color: var(--error); }
+    .tier-hot { color: #dc2626; font-weight: 700; }
+    .tier-warm { color: #d97706; font-weight: 700; }
+    .tier-cold { color: #3b82f6; font-weight: 600; }
+{% endblock %}
+
+{% block body %}
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar">
+        <div class="p-5 pb-3">
+            <a href="/dashboard" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+        </div>
+        <nav class="flex-1 py-2">
+            <a href="/dashboard" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+                Dashboard
+            </a>
+            <a href="/admin" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                Admin
+            </a>
+            <a href="/growth" class="sidebar-nav-item active">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
+                Growth
+            </a>
+            <a href="/growth/settings" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+                Growth Config
+            </a>
+            <a href="/settings" class="sidebar-nav-item">
+                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Settings
+            </a>
+        </nav>
+        <div class="p-4 border-t" style="border-color: var(--border-default);">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white" style="background: linear-gradient(135deg, #4a6741, #5c7d52);">{{ (seller.shop_name or 'S')[0] }}</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ seller.shop_name or 'My Shop' }}</p>
+                    <p class="text-xs truncate" style="color: var(--text-tertiary);">{{ seller.email }}</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-between">
+                <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg transition-colors" style="color: var(--text-tertiary);"><svg class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg><svg class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+                <a href="/logout" class="text-xs font-medium no-underline transition-colors" style="color: var(--text-tertiary);">Log out</a>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <div class="md:hidden sticky top-0 z-30 border-b px-4 h-14 flex items-center gap-3" style="background: var(--surface-0); border-color: var(--border-default);">
+            <button onclick="toggleSidebar()" class="p-1.5"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg></button>
+            <span class="text-lg font-extrabold">Growth Dashboard</span>
+        </div>
+
+        <div class="p-6 md:p-8 max-w-7xl mx-auto">
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <div class="mb-4 p-3 rounded-lg text-sm font-medium {% if category == 'error' %}bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400{% else %}bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400{% endif %}">{{ message }}</div>
+            {% endfor %}
+            {% endwith %}
+
+            <!-- Welcome Banner -->
+            <div class="welcome-banner mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h1 class="text-xl font-bold" style="color: var(--text-primary);">Growth Command Center</h1>
+                        <p class="text-sm mt-1" style="color: var(--text-secondary);">
+                            {% if config.growth_enabled %}
+                                <span class="inline-flex items-center gap-1.5"><span class="agent-dot running"></span> System Active</span>
+                                — Budget: ${{ "%.2f"|format(overview.spend_today) }}/${{ "%.2f"|format(config.daily_budget) }} today
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5"><span class="agent-dot idle"></span> System Paused</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="/growth/settings" class="btn-secondary text-sm px-4 py-2">Settings</a>
+                        <form method="POST" action="/growth/trigger" style="display:inline;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" name="agent" value="commander" class="btn-primary text-sm px-4 py-2">Run Cycle Now</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">Total Leads</div>
+                    <div class="stat-value mt-1" style="color: var(--brand);">{{ overview.leads_total }}</div>
+                    <div class="text-xs mt-1" style="color: var(--text-tertiary);">+{{ overview.leads_today }} today</div>
+                </div>
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">HOT Leads</div>
+                    <div class="stat-value mt-1 tier-hot">{{ overview.leads_hot }}</div>
+                </div>
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">Messages Sent</div>
+                    <div class="stat-value mt-1" style="color: var(--text-primary);">{{ overview.messages_total }}</div>
+                    <div class="text-xs mt-1" style="color: var(--text-tertiary);">+{{ overview.messages_today }} today</div>
+                </div>
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">Reply Rate</div>
+                    <div class="stat-value mt-1" style="color: var(--amber);">{{ overview.reply_rate }}%</div>
+                </div>
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">Conversions</div>
+                    <div class="stat-value mt-1" style="color: var(--brand);">{{ overview.leads_converted }}</div>
+                    <div class="text-xs mt-1" style="color: var(--text-tertiary);">{{ overview.conversion_rate }}% rate</div>
+                </div>
+                <div class="card p-4">
+                    <div class="stat-label" style="color: var(--text-tertiary);">Videos</div>
+                    <div class="stat-value mt-1" style="color: var(--text-primary);">{{ overview.videos_total }}</div>
+                    <div class="text-xs mt-1" style="color: var(--text-tertiary);">{{ overview.video_views }} views</div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Lead Funnel -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">Lead Funnel</h2>
+                    {% set max_funnel = [funnel.new, funnel.contacted, funnel.responded, funnel.converted]|max or 1 %}
+                    <div class="space-y-2">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1" style="color: var(--text-secondary);"><span>Discovered</span><span>{{ funnel.new }}</span></div>
+                            <div class="funnel-bar" style="width: {{ (funnel.new / max_funnel * 100)|int }}%; background: linear-gradient(90deg, #3b82f6, #60a5fa);">{{ funnel.new }}</div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1" style="color: var(--text-secondary);"><span>Contacted</span><span>{{ funnel.contacted }}</span></div>
+                            <div class="funnel-bar" style="width: {{ (funnel.contacted / max_funnel * 100)|int }}%; background: linear-gradient(90deg, #d97706, #f59e0b);">{{ funnel.contacted }}</div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1" style="color: var(--text-secondary);"><span>Replied</span><span>{{ funnel.responded }}</span></div>
+                            <div class="funnel-bar" style="width: {{ (funnel.responded / max_funnel * 100)|int }}%; background: linear-gradient(90deg, #4a6741, #5c7d52);">{{ funnel.responded }}</div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1" style="color: var(--text-secondary);"><span>Converted</span><span>{{ funnel.converted }}</span></div>
+                            <div class="funnel-bar" style="width: {{ (funnel.converted / max_funnel * 100)|int }}%; background: linear-gradient(90deg, #059669, #10b981);">{{ funnel.converted }}</div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1" style="color: var(--text-tertiary);"><span>Dead</span><span>{{ funnel.dead }}</span></div>
+                            <div class="funnel-bar" style="width: {{ (funnel.dead / max_funnel * 100)|int }}%; background: var(--surface-3); color: var(--text-secondary);">{{ funnel.dead }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Status -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">Agent Status</h2>
+                    <!-- Individual Agent Triggers -->
+                    <form method="POST" action="/growth/trigger" class="flex flex-wrap gap-2 mb-4 justify-center">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button name="agent" value="scout" class="btn-secondary text-xs px-3 py-1.5">Scout</button>
+                        <button name="agent" value="writer" class="btn-secondary text-xs px-3 py-1.5">Writer</button>
+                        <button name="agent" value="creator" class="btn-secondary text-xs px-3 py-1.5">Creator</button>
+                        <button name="agent" value="listener" class="btn-secondary text-xs px-3 py-1.5">Listener</button>
+                    </form>
+                    <div class="space-y-3">
+                        {% for agent_name, agent_info in agents.items() %}
+                        <div class="flex items-center justify-between p-2 rounded-lg" style="background: var(--surface-1);">
+                            <div class="flex items-center gap-2">
+                                <span class="agent-dot {% if agent_info.last_run and agent_info.error_count == 0 %}idle{% elif agent_info.error_count > 0 %}error{% else %}idle{% endif %}"></span>
+                                <span class="text-sm font-semibold capitalize" style="color: var(--text-primary);">{{ agent_name }}</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs" style="color: var(--text-secondary);">
+                                    {% if agent_info.last_run %}
+                                        Last: {{ agent_info.last_run|string|truncate(16, True, '') }}
+                                    {% else %}
+                                        Never run
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs" style="color: var(--text-tertiary);">
+                                    {{ agent_info.actions_24h }} actions / ${{ "%.3f"|format(agent_info.cost_24h) }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Review Queue -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">
+                        Review Queue
+                        {% if review_queue|length > 0 %}
+                        <span class="inline-flex items-center justify-center ml-2 w-5 h-5 text-xs font-bold rounded-full" style="background: var(--error-bg); color: var(--error);">{{ review_queue|length }}</span>
+                        {% endif %}
+                    </h2>
+                    {% if review_queue %}
+                    <div class="space-y-2 max-h-80 overflow-y-auto">
+                        {% for msg in review_queue[:10] %}
+                        <div class="p-3 rounded-lg border" style="background: var(--surface-1); border-color: var(--border-subtle);">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);">{{ msg.channel }}</span>
+                                <span class="text-xs" style="color: var(--text-tertiary);">{{ msg.shop_name or 'Unknown' }} — {{ msg.tier or '' }}</span>
+                            </div>
+                            {% if msg.subject %}
+                            <div class="text-xs font-medium mb-1" style="color: var(--text-secondary);">Subject: {{ msg.subject }}</div>
+                            {% endif %}
+                            <div class="text-xs" style="color: var(--text-primary);">{{ msg.content[:200] }}{% if msg.content|length > 200 %}...{% endif %}</div>
+                            <div class="flex gap-2 mt-2">
+                                <form method="POST" action="/growth/review" style="display:inline;">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="msg_id" value="{{ msg.id }}">
+                                    <button type="submit" name="action" value="approve" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);">Approve</button>
+                                    <button type="submit" name="action" value="reject" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-center py-6" style="color: var(--text-tertiary);">Queue empty — all caught up!</p>
+                    {% endif %}
+                </div>
+
+                <!-- Top Content -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">Content Performance</h2>
+                    {% if content %}
+                    <div class="space-y-2">
+                        {% for item in content[:8] %}
+                        <div class="flex items-center justify-between p-2 rounded-lg" style="background: var(--surface-1);">
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ item.title or 'Untitled' }}</div>
+                                <div class="text-xs" style="color: var(--text-tertiary);">{{ item.platform or 'draft' }} · {{ item.status }}</div>
+                            </div>
+                            <div class="text-right ml-3">
+                                <div class="text-sm font-semibold" style="color: var(--brand);">{{ item.views }} views</div>
+                                <div class="text-xs" style="color: var(--text-tertiary);">{{ item.likes }} likes</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-center py-6" style="color: var(--text-tertiary);">No content yet — Creator will start producing videos</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Top Leads + Etsy Outreach Queue -->
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Top Leads -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">
+                        Top Leads
+                        {% if hot_leads|length > 0 %}
+                        <span class="inline-flex items-center justify-center ml-2 w-5 h-5 text-xs font-bold rounded-full" style="background: rgba(220,38,38,0.08); color: #dc2626;">{{ hot_leads|length }}</span>
+                        {% endif %}
+                    </h2>
+                    {% if hot_leads %}
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        {% for lead in hot_leads %}
+                        <div class="p-3 rounded-lg border" style="background: var(--surface-1); border-color: var(--border-subtle);">
+                            <div class="flex items-center justify-between mb-1">
+                                <a href="{{ lead.shop_url }}" target="_blank" rel="noopener" class="text-sm font-semibold no-underline hover:underline" style="color: var(--brand);">{{ lead.shop_name or 'Unknown' }}</a>
+                                <span class="text-xs font-bold tier-hot">{{ lead.score }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);">{{ lead.niche or '—' }}</span>
+                                {% if lead.sale_count %}
+                                <span class="text-xs" style="color: var(--text-tertiary);">{{ lead.sale_count|int }} sales</span>
+                                {% endif %}
+                                {% if lead.email %}
+                                <span class="text-xs" style="color: var(--text-secondary);">has email</span>
+                                {% endif %}
+                                <span class="text-xs px-1.5 py-0.5 rounded {% if lead.contact_status == 'contacted' %}bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400{% elif lead.contact_status == 'new' %}bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400{% else %}bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400{% endif %}">{{ lead.contact_status }}</span>
+                            </div>
+                            {% if lead.outreach_angle %}
+                            <p class="text-xs mt-1.5" style="color: var(--text-secondary);">{{ lead.outreach_angle[:120] }}{% if lead.outreach_angle|length > 120 %}...{% endif %}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-center py-6" style="color: var(--text-tertiary);">No HOT leads yet — run Scout to discover leads</p>
+                    {% endif %}
+                </div>
+
+                <!-- Etsy Outreach Queue -->
+                <div class="card p-5">
+                    <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">
+                        Etsy Outreach Queue
+                        {% if etsy_queue|length > 0 %}
+                        <span class="inline-flex items-center justify-center ml-2 w-5 h-5 text-xs font-bold rounded-full" style="background: rgba(74,103,65,0.08); color: var(--brand);">{{ etsy_queue|length }}</span>
+                        {% endif %}
+                    </h2>
+                    {% if etsy_queue %}
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        {% for msg in etsy_queue %}
+                        <div class="p-3 rounded-lg border" style="background: var(--surface-1); border-color: var(--border-subtle);" id="etsy-msg-{{ msg.id }}">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-semibold" style="color: var(--text-primary);">{{ msg.shop_name or 'Unknown' }}</span>
+                                <span class="text-xs font-bold {% if msg.tier == 'HOT' %}tier-hot{% elif msg.tier == 'WARM' %}tier-warm{% else %}tier-cold{% endif %}">{{ msg.tier or '' }} {{ msg.score or '' }}</span>
+                            </div>
+                            <div class="text-xs mb-2" style="color: var(--text-primary);">{{ msg.content[:250] }}{% if msg.content|length > 250 %}...{% endif %}</div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyEtsyMsg('{{ msg.id }}', this)" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);" data-content="{{ msg.content|e }}">Copy</button>
+                                {% if msg.shop_url %}
+                                <a href="{{ msg.shop_url }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--surface-2); color: var(--text-secondary);">Open Shop</a>
+                                {% endif %}
+                                <form method="POST" action="/growth/review" style="display:inline;">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="msg_id" value="{{ msg.id }}">
+                                    <button type="submit" name="action" value="mark_sent" class="text-xs px-3 py-1 rounded font-semibold" style="background: rgba(5,150,105,0.08); color: #059669;">Mark Sent</button>
+                                    <button type="submit" name="action" value="reject" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Skip</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-center py-6" style="color: var(--text-tertiary);">No Etsy messages queued — run Writer to draft outreach</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="card p-5">
+                <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">Activity Feed</h2>
+                {% if agent_log %}
+                <div class="space-y-1.5 max-h-96 overflow-y-auto">
+                    {% for entry in agent_log[:25] %}
+                    <div class="log-entry {% if not entry.success %}error{% endif %}" style="background: var(--surface-1);">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="font-semibold capitalize" style="color: var(--brand);">{{ entry.agent }}</span>
+                                <span style="color: var(--text-secondary);">{{ entry.action }}</span>
+                                {% if not entry.success %}<span style="color: var(--error);">FAILED</span>{% endif %}
+                            </div>
+                            <div class="text-xs" style="color: var(--text-tertiary);">
+                                ${{ "%.4f"|format(entry.cost) }} · {{ entry.created_at|string|truncate(16, True, '') if entry.created_at else '' }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-center py-6" style="color: var(--text-tertiary);">No activity yet — run a cycle to get started</p>
+                {% endif %}
+            </div>
+
+            <!-- Spend Summary -->
+            <div class="mt-4 text-center text-xs" style="color: var(--text-tertiary);">
+                Total spend: ${{ "%.2f"|format(overview.total_spend) }} all-time · ${{ "%.2f"|format(overview.spend_today) }} today
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function copyEtsyMsg(msgId, btn) {
+        var content = btn.getAttribute('data-content');
+        if (!content) return;
+        // Decode HTML entities
+        var txt = document.createElement('textarea');
+        txt.innerHTML = content;
+        navigator.clipboard.writeText(txt.value).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.background = 'rgba(5,150,105,0.12)';
+            setTimeout(function() {
+                btn.textContent = orig;
+                btn.style.background = '';
+            }, 2000);
+        });
+    }
+    </script>
+{% endblock %}
