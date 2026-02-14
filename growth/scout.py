@@ -807,7 +807,10 @@ JSON only."""
             clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
         parsed = json.loads(clean)
 
-        score = min(max(int(parsed.get("score", 0)), 0), 100)
+        try:
+            score = min(max(int(parsed.get("score", 0)), 0), 100)
+        except (ValueError, TypeError):
+            score = 0
         tier = parsed.get("tier", "COLD")
         if tier not in ("HOT", "WARM", "COLD"):
             tier = "HOT" if score >= 70 else "WARM" if score >= 40 else "COLD"
@@ -1051,14 +1054,17 @@ def run(niches=None):
     if niches is None:
         niches = get_smart_niches(max_niches=3)
 
-    total_leads = 0
+    etsy_leads = 0
+    reddit_leads = 0
 
     # Etsy discovery
     for niche in niches:
-        total_leads += discover_etsy_leads(niche, limit=30)
+        etsy_leads += discover_etsy_leads(niche, limit=30)
 
     # Reddit discovery
-    total_leads += discover_reddit_leads()
+    reddit_leads += discover_reddit_leads()
+
+    total_leads = etsy_leads + reddit_leads
 
     # Score unscored leads
     scored = score_unscored_leads(limit=30)
@@ -1073,7 +1079,9 @@ def run(niches=None):
     duration_ms = int((time.time() - start) * 1000)
     result = {
         "status": "ok",
-        "leads_added": total_leads,
+        "total_leads": total_leads,
+        "etsy_leads": etsy_leads,
+        "reddit_leads": reddit_leads,
         "leads_scored": scored,
         "niches_searched": niches,
         "duration_ms": duration_ms,
