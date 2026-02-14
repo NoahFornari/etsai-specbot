@@ -556,26 +556,41 @@ def run_cycle():
     )
 
     # Step 5: Build flat summary for dashboard display
+    def _safe_get(d, key, default=0):
+        return (d.get(key, default) or default) if isinstance(d, dict) else default
+
+    # Collect per-agent errors
+    agent_errors = []
+    for aname, adata in [("scout", scout_result), ("writer", writer_result),
+                          ("listener", listener_result), ("creator", creator_result)]:
+        if isinstance(adata, dict) and adata.get("status") == "error":
+            agent_errors.append(f"{aname}: {adata.get('error', '?')[:80]}")
+
     summary = {
-        "leads_found": (scout_result.get("total_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
-        "etsy_leads": (scout_result.get("etsy_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
-        "reddit_leads": (scout_result.get("reddit_leads", 0) or 0) if isinstance(scout_result, dict) else 0,
-        "messages_drafted": (writer_result.get("drafted", 0) or 0) if isinstance(writer_result, dict) else 0,
-        "threads_found": (listener_result.get("threads_found", 0) or 0) if isinstance(listener_result, dict) else 0,
-        "relevant": (listener_result.get("relevant", 0) or 0) if isinstance(listener_result, dict) else 0,
-        "replies_drafted": (listener_result.get("replies_drafted", 0) or 0) if isinstance(listener_result, dict) else 0,
-        "videos_created": (creator_result.get("videos_created", 0) or 0) if isinstance(creator_result, dict) else 0,
+        "leads_found": _safe_get(scout_result, "total_leads"),
+        "etsy_leads": _safe_get(scout_result, "etsy_leads"),
+        "reddit_leads": _safe_get(scout_result, "reddit_leads"),
+        "messages_drafted": _safe_get(writer_result, "drafted"),
+        "followups_drafted": _safe_get(writer_result, "followups_drafted"),
+        "threads_found": _safe_get(listener_result, "threads_found"),
+        "relevant": _safe_get(listener_result, "relevant"),
+        "replies_drafted": _safe_get(listener_result, "replies_drafted"),
+        "videos_created": _safe_get(creator_result, "videos_created"),
         "strategy": instructions.get("strategy_notes", ""),
+        "strategy_mode": cycle_result.get("strategy_mode", "unknown"),
     }
+    if agent_errors:
+        summary["errors"] = agent_errors
     cycle_result["summary"] = summary
 
     # Step 6: Log
     duration_ms = int((time.time() - start) * 1000)
     cycle_result["duration_ms"] = duration_ms
     summary["total_cost"] = round(metrics["overview"].get("spend_today", 0), 4)
+    summary["duration_ms"] = duration_ms
 
-    # Log the flat summary as the details (so the dashboard can read it easily)
-    log_agent_action("commander", "run_cycle", True, summary, duration_ms=duration_ms)
+    has_errors = bool(agent_errors)
+    log_agent_action("commander", "run_cycle", not has_errors, summary, duration_ms=duration_ms)
 
     logger.info(f"Commander: Cycle complete in {duration_ms}ms — "
                 f"Scout: {scout_result.get('total_leads', 'N/A')}, "

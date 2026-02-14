@@ -113,48 +113,54 @@
 
             <!-- Last Cycle Summary -->
             {% if last_cycle %}
-            <div class="card mb-6 p-5" style="border-left: 4px solid var(--brand);">
+            <div class="card mb-6 p-5" style="border-left: 4px solid {% if last_cycle.success == 0 %}var(--error){% else %}var(--brand){% endif %};">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-base font-bold" style="color: var(--text-primary);">Last Cycle Summary</h2>
-                    <span class="text-xs" style="color: var(--text-tertiary);">{{ last_cycle.created_at|string|truncate(16, True, '') if last_cycle.created_at else '' }}</span>
+                    <h2 class="text-base font-bold" style="color: var(--text-primary);">
+                        Last Cycle Summary
+                        {% if last_cycle_details.get('strategy_mode') %}
+                        <span class="text-xs font-normal ml-2 px-2 py-0.5 rounded" style="background: var(--surface-2); color: var(--text-secondary);">{{ last_cycle_details.strategy_mode }}</span>
+                        {% endif %}
+                    </h2>
+                    <div class="text-right">
+                        <span class="text-xs" style="color: var(--text-tertiary);">{{ last_cycle.created_at|string|truncate(16, True, '') if last_cycle.created_at else '' }}</span>
+                        {% if last_cycle_details.get('duration_ms') %}
+                        <span class="text-xs ml-2" style="color: var(--text-tertiary);">{{ "%.1f"|format(last_cycle_details.duration_ms / 1000) }}s</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                    {% if last_cycle_details.get('leads_found') is not none %}
+                {% if last_cycle_details.get('errors') %}
+                <div class="mb-3 p-2 rounded-lg text-xs font-medium" style="background: rgba(239,68,68,0.08); color: #ef4444;">
+                    Agent errors:
+                    {% for err in last_cycle_details.errors %}
+                    <div class="mt-1">{{ err }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                     <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
                         <div class="text-lg font-bold" style="color: var(--brand);">{{ last_cycle_details.get('leads_found', 0) }}</div>
                         <div class="text-xs" style="color: var(--text-tertiary);">Leads Found</div>
                     </div>
-                    {% endif %}
-                    {% if last_cycle_details.get('reddit_leads') %}
-                    <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
-                        <div class="text-lg font-bold" style="color: var(--text-primary);">{{ last_cycle_details.reddit_leads }}</div>
-                        <div class="text-xs" style="color: var(--text-tertiary);">Reddit Leads</div>
-                    </div>
-                    {% endif %}
-                    {% if last_cycle_details.get('messages_drafted') is not none %}
                     <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
                         <div class="text-lg font-bold" style="color: var(--amber, #d97706);">{{ last_cycle_details.get('messages_drafted', 0) }}</div>
-                        <div class="text-xs" style="color: var(--text-tertiary);">Messages Drafted</div>
+                        <div class="text-xs" style="color: var(--text-tertiary);">Drafted</div>
                     </div>
-                    {% endif %}
-                    {% if last_cycle_details.get('threads_found') %}
                     <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
-                        <div class="text-lg font-bold" style="color: var(--text-primary);">{{ last_cycle_details.threads_found }}</div>
-                        <div class="text-xs" style="color: var(--text-tertiary);">Threads Scanned</div>
+                        <div class="text-lg font-bold" style="color: var(--text-primary);">{{ last_cycle_details.get('threads_found', 0) }}</div>
+                        <div class="text-xs" style="color: var(--text-tertiary);">Threads</div>
                     </div>
-                    {% endif %}
-                    {% if last_cycle_details.get('replies_drafted') %}
                     <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
-                        <div class="text-lg font-bold" style="color: var(--brand);">{{ last_cycle_details.replies_drafted }}</div>
-                        <div class="text-xs" style="color: var(--text-tertiary);">Replies Drafted</div>
+                        <div class="text-lg font-bold" style="color: var(--brand);">{{ last_cycle_details.get('replies_drafted', 0) }}</div>
+                        <div class="text-xs" style="color: var(--text-tertiary);">Replies</div>
                     </div>
-                    {% endif %}
-                    {% if last_cycle_details.get('total_cost') %}
                     <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
-                        <div class="text-lg font-bold" style="color: var(--text-secondary);">${{ "%.3f"|format(last_cycle_details.total_cost) }}</div>
+                        <div class="text-lg font-bold" style="color: var(--text-primary);">{{ last_cycle_details.get('followups_drafted', 0) }}</div>
+                        <div class="text-xs" style="color: var(--text-tertiary);">Follow-ups</div>
+                    </div>
+                    <div class="text-center p-2 rounded-lg" style="background: var(--surface-1);">
+                        <div class="text-lg font-bold" style="color: var(--text-secondary);">${{ "%.3f"|format(last_cycle_details.get('total_cost', 0)) }}</div>
                         <div class="text-xs" style="color: var(--text-tertiary);">Cost</div>
                     </div>
-                    {% endif %}
                 </div>
                 {% if last_cycle_details.get('strategy') %}
                 <div class="mt-3 p-3 rounded-lg text-xs" style="background: var(--surface-1); color: var(--text-secondary);">
@@ -182,7 +188,7 @@
                     </div>
                     <div class="flex gap-2">
                         <a href="/growth/settings" class="btn-secondary text-sm px-4 py-2">Settings</a>
-                        <form method="POST" action="/growth/trigger" style="display:inline;">
+                        <form method="POST" action="/growth/trigger" style="display:inline;" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Running...';">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" name="agent" value="commander" class="btn-primary text-sm px-4 py-2">Run Cycle Now</button>
                         </form>
@@ -261,7 +267,7 @@
                 <div class="card p-5">
                     <h2 class="text-base font-bold mb-4 text-center" style="color: var(--text-primary);">Agent Status</h2>
                     <!-- Individual Agent Triggers -->
-                    <form method="POST" action="/growth/trigger" class="flex flex-wrap gap-2 mb-4 justify-center">
+                    <form method="POST" action="/growth/trigger" class="flex flex-wrap gap-2 mb-4 justify-center" onsubmit="var b=this.querySelector('[type=submit]:focus')||event.submitter;if(b){b.disabled=true;b.textContent='Running...';}">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button name="agent" value="scout" class="btn-secondary text-xs px-3 py-1.5">Scout</button>
                         <button name="agent" value="writer" class="btn-secondary text-xs px-3 py-1.5">Writer</button>

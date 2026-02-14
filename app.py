@@ -1635,54 +1635,82 @@ def growth_settings():
 def _format_growth_result(agent, result):
     """Format a growth agent result dict into a human-readable summary."""
     if not result or not isinstance(result, dict):
-        return f"{agent.title()} finished."
+        return f"{agent.title()} finished (no data returned)."
+
+    # Check for disabled/error status first
+    status = result.get("status", "")
+    if status == "disabled":
+        return f"{agent.title()} — GROWTH_ENABLED is off"
+    if status == "error":
+        return f"{agent.title()} — Error: {result.get('error', 'unknown')[:150]}"
+
     parts = []
+    errors = []
+
     # Commander cycle — use the flat summary
     if agent == "commander":
         s = result.get("summary", result)
-        if s.get("leads_found"):
-            parts.append(f"{s['leads_found']} leads found")
-        if s.get("reddit_leads"):
-            parts.append(f"{s['reddit_leads']} from Reddit")
-        if s.get("messages_drafted"):
-            parts.append(f"{s['messages_drafted']} messages drafted")
+        agents_data = result.get("agents", {})
+
+        # Show strategy mode
+        mode = result.get("strategy_mode", "")
+        if mode:
+            parts.append(f"mode={mode}")
+
+        # Show results (even zeros)
+        parts.append(f"{s.get('leads_found', 0)} leads")
+        parts.append(f"{s.get('messages_drafted', 0)} drafted")
+
         if s.get("threads_found"):
-            parts.append(f"{s['threads_found']} threads scanned")
-        if s.get("relevant"):
-            parts.append(f"{s['relevant']} relevant")
+            parts.append(f"{s['threads_found']} threads")
         if s.get("replies_drafted"):
-            parts.append(f"{s['replies_drafted']} replies drafted")
+            parts.append(f"{s['replies_drafted']} replies")
+
+        # Surface per-agent errors
+        for aname, adata in agents_data.items():
+            if isinstance(adata, dict) and adata.get("status") == "error":
+                errors.append(f"{aname}: {adata.get('error', '?')[:60]}")
+
         if s.get("total_cost"):
-            parts.append(f"${s['total_cost']:.3f} spent")
+            parts.append(f"${s['total_cost']:.3f}")
+
+        duration = result.get("duration_ms")
+        if duration:
+            parts.append(f"{duration/1000:.1f}s")
+
     # Scout
     elif agent == "scout":
-        if result.get("etsy_leads"):
-            parts.append(f"{result['etsy_leads']} Etsy leads")
-        if result.get("reddit_leads"):
-            parts.append(f"{result['reddit_leads']} Reddit leads")
-        if result.get("total_leads"):
-            parts.append(f"{result['total_leads']} total leads")
+        parts.append(f"{result.get('etsy_leads', 0)} Etsy leads")
+        parts.append(f"{result.get('reddit_leads', 0)} Reddit leads")
+        parts.append(f"{result.get('total_leads', 0)} total")
+        if result.get("leads_scored"):
+            parts.append(f"{result['leads_scored']} scored")
     # Writer
     elif agent == "writer":
-        if result.get("drafted"):
-            parts.append(f"{result['drafted']} messages drafted")
-        if result.get("leads_processed"):
-            parts.append(f"{result['leads_processed']} leads processed")
+        parts.append(f"{result.get('drafted', 0)} drafted")
+        if result.get("followups_drafted"):
+            parts.append(f"{result['followups_drafted']} follow-ups")
     # Listener
     elif agent == "listener":
-        if result.get("threads_found"):
-            parts.append(f"{result['threads_found']} threads found")
+        parts.append(f"{result.get('threads_found', 0)} threads")
         if result.get("relevant"):
             parts.append(f"{result['relevant']} relevant")
         if result.get("replies_drafted"):
-            parts.append(f"{result['replies_drafted']} replies drafted")
+            parts.append(f"{result['replies_drafted']} replies")
     # Fallback
-    if not parts:
+    else:
         for k, v in result.items():
-            if k not in ("status", "cost", "duration_ms") and v:
+            if k not in ("status", "cost", "duration_ms", "agents", "summary", "timestamp",
+                         "metrics_snapshot", "instructions", "strategy_mode", "cycle_result") and v:
                 parts.append(f"{k}: {v}")
-    summary = ", ".join(parts[:6]) if parts else "Completed"
-    return f"{agent.title()} — {summary}"
+
+    if not parts:
+        parts = ["Completed (0 results)"]
+
+    summary = f"{agent.title()} — {', '.join(parts[:8])}"
+    if errors:
+        summary += f" | ERRORS: {'; '.join(errors[:3])}"
+    return summary
 
 
 @app.route("/growth/trigger", methods=["POST"])
