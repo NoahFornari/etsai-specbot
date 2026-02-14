@@ -416,11 +416,10 @@
                             <div class="text-xs mb-2 etsy-msg-content" style="color: var(--text-primary); cursor:pointer;" title="Click to copy message"
                                  onclick="copyEtsyMsg('{{ msg.id }}', this)">{{ msg.content }}</div>
                             <div class="flex gap-2 flex-wrap items-center">
-                                {% if msg.shop_name %}
-                                <a href="https://www.etsy.com/conversations?ref=hdr&search_query={{ msg.shop_name|urlencode }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--brand-bg); color: var(--brand);">Message on Etsy</a>
-                                {% endif %}
                                 {% if msg.shop_url %}
-                                <a href="{{ msg.shop_url }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--surface-2); color: var(--text-secondary);">Shop</a>
+                                <a href="{{ msg.shop_url }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--brand-bg); color: var(--brand);">Open Shop & Message</a>
+                                {% elif msg.shop_name %}
+                                <a href="https://www.etsy.com/shop/{{ msg.shop_name }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--brand-bg); color: var(--brand);">Open Shop & Message</a>
                                 {% endif %}
                                 <form method="POST" action="/growth/review" style="display:inline;">
                                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -503,13 +502,14 @@
             <div id="rm-subject" class="text-xs font-medium mb-2" style="color: var(--text-secondary); display:none;"></div>
             <div class="p-3 rounded-lg text-sm mb-4" style="background: var(--surface-1); color: var(--text-primary); white-space: pre-wrap;" id="rm-content"></div>
             <div class="flex gap-2 flex-wrap">
-                <form method="POST" action="/growth/review" style="display:inline;" id="rm-form">
+                <form method="POST" action="/growth/review" id="rm-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="msg_id" id="rm-msg-id" value="">
-                    <button type="submit" name="action" value="approve" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);">Approve</button>
-                    <button type="submit" name="action" value="reject" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Reject</button>
+                    <input type="hidden" name="action" id="rm-action" value="">
+                    <button type="button" onclick="submitReview('approve')" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);">Approve</button>
+                    <button type="button" onclick="submitReview('reject')" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Reject</button>
                 </form>
-                <form method="POST" action="/growth/rewrite" style="display:inline;" id="rm-rewrite-form">
+                <form method="POST" action="/growth/rewrite" id="rm-rewrite-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="msg_id" id="rm-rewrite-id" value="">
                     <input type="text" name="instructions" placeholder="Rewrite instructions (optional)" class="text-xs px-3 py-1.5 rounded border" style="background: var(--surface-1); border-color: var(--border-subtle); color: var(--text-primary); width: 180px;">
@@ -557,6 +557,12 @@
             document.getElementById('reviewModal').classList.add('active');
         });
     });
+    function submitReview(action) {
+        var msgId = document.getElementById('rm-msg-id').value;
+        if (!msgId) { alert('No message selected'); return; }
+        document.getElementById('rm-action').value = action;
+        document.getElementById('rm-form').submit();
+    }
     function closeReviewModal() {
         document.getElementById('reviewModal').classList.remove('active');
     }

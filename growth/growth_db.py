@@ -602,11 +602,11 @@ def get_message_queue(channel=None, status="queued", limit=50):
 
 
 def get_review_queue(limit=50):
-    """Get messages awaiting human review."""
+    """Get messages awaiting human review (excludes etsy_convo — has its own queue)."""
     conn = get_conn()
     try:
         rows = conn.execute(
-            "SELECT gm.*, gl.shop_name, gl.niche, gl.tier FROM growth_messages gm LEFT JOIN growth_leads gl ON gm.lead_id = gl.id WHERE gm.review_status = 'pending' ORDER BY gm.created_at ASC LIMIT %s",
+            "SELECT gm.*, gl.shop_name, gl.niche, gl.tier, gl.score FROM growth_messages gm LEFT JOIN growth_leads gl ON gm.lead_id = gl.id WHERE gm.review_status = 'pending' AND gm.channel != 'etsy_convo' ORDER BY gm.created_at ASC LIMIT %s",
             (limit,)
         ).fetchall()
         return [dict(r) for r in rows]
