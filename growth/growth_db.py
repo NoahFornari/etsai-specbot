@@ -690,6 +690,68 @@ def get_lead_messages(lead_id):
         conn.close()
 
 
+def get_growth_message(msg_id):
+    """Fetch a single message with its lead info (for rewrite context)."""
+    conn = get_conn()
+    try:
+        row = conn.execute("""
+            SELECT gm.*, gl.shop_name, gl.shop_url, gl.niche, gl.tier, gl.score,
+                   gl.outreach_angle, gl.sale_count, gl.enrichment_data
+            FROM growth_messages gm
+            LEFT JOIN growth_leads gl ON gm.lead_id = gl.id
+            WHERE gm.id = %s
+        """, (msg_id,)).fetchone()
+        if row:
+            d = dict(row)
+            try:
+                d["enrichment_data"] = json.loads(d.get("enrichment_data") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                d["enrichment_data"] = {}
+            return d
+        return None
+    finally:
+        conn.close()
+
+
+def update_message_content(msg_id, new_content):
+    """Update the content of a message (used by rewrite)."""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "UPDATE growth_messages SET content = %s WHERE id = %s",
+            (new_content, msg_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_followup_candidates(gap_days=3, max_followups=3, limit=10):
+    """Get leads that were contacted but haven't replied, and are due for a follow-up."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(f"""
+            SELECT gl.* FROM growth_leads gl
+            WHERE gl.contact_status = 'contacted'
+              AND gl.last_contacted_at IS NOT NULL
+              AND gl.last_contacted_at <= {_ago(f'{gap_days} days')}
+              AND (
+                  SELECT COUNT(*) FROM growth_messages gm
+                  WHERE gm.lead_id = gl.id AND gm.variant = 'followup'
+              ) < %s
+            ORDER BY gl.score DESC
+            LIMIT %s
+        """, (max_followups, limit)).fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            d["enrichment_data"] = json.loads(d.get("enrichment_data") or "{}")
+            results.append(d)
+        return results
+    finally:
+        conn.close()
+
+
 # =============================================================
 # CONTENT CRUD
 # =============================================================

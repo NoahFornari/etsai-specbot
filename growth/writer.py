@@ -41,19 +41,18 @@ VARIANTS = ["question_first", "value_first", "casual", "professional"]
 # SYSTEM PROMPTS
 # =============================================================
 
-EMAIL_SYSTEM = """You are writing a cold email for ETSAI, an AI tool that helps Etsy sellers
-collect custom order specifications from buyers through an intelligent chat interface.
+EMAIL_SYSTEM = """You are Noah, a fellow Etsy seller who does custom orders. You're writing a
+short cold email to another seller whose shop caught your eye.
 
 Rules:
-- First line references something specific about their shop
-- Ask a genuine question about their custom order workflow — don't pitch yet
-- Under 80 words total
-- Conversational, lowercase-okay tone. No corporate speak.
-- No emojis
-- Sign off as "Noah" (founder of ETSAI)
+- Reference something genuinely specific — a product, their style, a review you noticed
+- Ask ONE question about how they handle custom order details from buyers
+- Do NOT mention ETSAI, any tool, any product, or anything you're building. Pure conversation.
+- Under 50 words total. Two sentences max.
+- Casual, lowercase-okay. Like emailing someone you met at a craft fair.
+- No emojis, no links, no pitch, no CTA
+- Sign off as just "Noah"
 - Do NOT include a subject line
-- Do NOT mention pricing or plans
-- The goal is to start a conversation, not close a sale
 
 Output the email body only. Nothing else."""
 
@@ -99,29 +98,31 @@ Rules:
 
 Output the DM text only. Nothing else."""
 
-ETSY_CONVO_SYSTEM = """You are writing a short Etsy Message (sent via Etsy's messaging system) to an Etsy seller.
-This is Noah, founder of ETSAI — a tool that helps custom order sellers collect specs from buyers.
+ETSY_CONVO_SYSTEM = """You are Noah, a fellow Etsy seller. You're sending a quick message through
+Etsy's messaging system to another seller whose shop you genuinely like.
 
 Rules:
-- Open by referencing their specific shop or a product they sell
-- Ask a genuine question about how they collect custom order details from buyers
-- Keep it to 2-4 sentences. Etsy messages should feel quick and natural.
-- Friendly, peer-to-peer tone — like one Etsy seller to another
-- No emojis, no links, no pricing, no hard pitch
-- Sign off as "Noah"
-- The goal is to start a conversation, not sell anything
+- Do NOT mention ETSAI, any tool, any product you're building, or that you're a "founder" of anything
+- Reference something specific about THEIR shop — a product that caught your eye, their custom work, etc.
+- Ask one genuine question about their custom order process (how they collect details, handle personalization, etc.)
+- TWO sentences max. Keep it short like a real Etsy message.
+- Vary your opening — don't always start with "I saw your shop" or "Hey I noticed". Be creative.
+- Peer-to-peer tone, like one maker to another
+- No emojis, no links, no pitch
+- Sign off as just "— Noah"
 
-Output the Etsy message text only. Nothing else."""
+Output the Etsy message only. Nothing else."""
 
-FOLLOWUP_SYSTEM = """You are writing a follow-up to a previous outreach message.
-The prospect didn't reply to the first message.
+FOLLOWUP_SYSTEM = """You are Noah, following up on a message you sent to a fellow Etsy seller.
+They didn't reply to your last message.
 
 Rules:
-- Reference the first message briefly
-- Share one specific value point about ETSAI
-- Include a soft CTA: "happy to show you a 30-second demo if curious"
-- Under 60 words
-- Sign off as "Noah"
+- Keep it super casual — "hey just bumping this" energy
+- If this is follow-up #1: do NOT mention ETSAI or any tool. Just re-ask your question or add a related thought.
+- If this is follow-up #2+: you can briefly mention you built a tool for custom order specs, but keep it to one clause, not the focus.
+- Under 40 words. One to two sentences.
+- No emojis, no links, no hard pitch, no "demo" offers
+- Sign off as "— Noah"
 
 Output the follow-up message only. Nothing else."""
 
@@ -280,16 +281,26 @@ def draft_followup(lead, previous_messages=None):
         logger.info(f"Writer: max follow-ups reached for {lead.get('shop_name')}")
         return None
 
+    # Determine original channel
+    orig_channel = "email"
+    for m in previous_messages:
+        if m.get("channel") and m["channel"] != "followup":
+            orig_channel = m["channel"]
+            break
+
     context = _build_lead_context(lead)
     prev_content = "\n---\n".join(m["content"][:200] for m in previous_messages[-2:])
+    followup_num = followup_count + 1
 
-    user_msg = f"""Write a follow-up for this seller who didn't reply:
+    user_msg = f"""Write follow-up #{followup_num} for this seller who didn't reply:
 
 SELLER:
 {context}
 
 PREVIOUS MESSAGE(S):
-{prev_content}"""
+{prev_content}
+
+This is follow-up number {followup_num}."""
 
     try:
         raw, cost, inp, out = call_claude(user_msg, AI_MODEL_CHEAP, max_tokens=200,
@@ -298,16 +309,23 @@ PREVIOUS MESSAGE(S):
         logger.error(f"Writer followup error: {e}")
         return None
 
+    # Use same channel as original message
+    review_needed = (
+        (orig_channel == "email" and REVIEW_QUEUE_EMAIL) or
+        (orig_channel == "etsy_convo" and REVIEW_QUEUE_ETSY_CONVO) or
+        True  # follow-ups always get reviewed
+    )
+
     msg_id = add_growth_message(
-        channel="email",
+        channel=orig_channel,
         content=raw,
         lead_id=lead.get("id"),
         variant="followup",
-        review_status="pending" if REVIEW_QUEUE_EMAIL else "approved",
+        review_status="pending" if review_needed else "approved",
     )
 
     log_agent_action("writer", "draft_followup", True,
-                     {"lead": lead.get("shop_name")},
+                     {"lead": lead.get("shop_name"), "followup_num": followup_num},
                      tokens_used=inp + out, cost=cost)
     return msg_id
 
@@ -629,6 +647,21 @@ def run():
         if msg_id:
             result["drafted"] += 1
         time.sleep(0.3)
+
+    # Draft follow-ups for contacted leads that haven't replied
+    from growth.growth_db import get_followup_candidates
+    followup_leads = get_followup_candidates(
+        gap_days=MIN_FOLLOWUP_GAP_DAYS,
+        max_followups=MAX_FOLLOWUPS_PER_LEAD,
+        limit=5,
+    )
+    followups_drafted = 0
+    for lead in followup_leads:
+        msg_id = draft_followup(lead)
+        if msg_id:
+            followups_drafted += 1
+        time.sleep(0.3)
+    result["followups_drafted"] = followups_drafted
 
     # Process send queue
     result["sent"] = process_send_queue()

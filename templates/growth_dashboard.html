@@ -34,6 +34,23 @@
     .tier-hot { color: #dc2626; font-weight: 700; }
     .tier-warm { color: #d97706; font-weight: 700; }
     .tier-cold { color: #3b82f6; font-weight: 600; }
+    .strategy-toggle { cursor: pointer; color: var(--brand); font-weight: 600; }
+    .strategy-toggle:hover { text-decoration: underline; }
+    /* Review modal */
+    .review-modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 100;
+        background: rgba(0,0,0,0.5); align-items: center; justify-content: center;
+    }
+    .review-modal-overlay.active { display: flex; }
+    .review-modal {
+        background: var(--surface-0); border: 1px solid var(--border-default);
+        border-radius: 12px; width: 90%; max-width: 520px; max-height: 80vh;
+        overflow-y: auto; padding: 1.5rem; position: relative;
+    }
+    .review-modal-close {
+        position: absolute; top: 0.75rem; right: 0.75rem; background: none;
+        border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-tertiary);
+    }
 {% endblock %}
 
 {% block body %}
@@ -141,7 +158,9 @@
                 </div>
                 {% if last_cycle_details.get('strategy') %}
                 <div class="mt-3 p-3 rounded-lg text-xs" style="background: var(--surface-1); color: var(--text-secondary);">
-                    <span class="font-semibold" style="color: var(--text-primary);">Strategy:</span> {{ last_cycle_details.strategy[:300] }}
+                    <span class="font-semibold" style="color: var(--text-primary);">Strategy:</span>
+                    <span id="strategy-short">{{ last_cycle_details.strategy[:150] }}{% if last_cycle_details.strategy|length > 150 %}… <a class="strategy-toggle" onclick="toggleStrategy()">Show full strategy</a>{% endif %}</span>
+                    <span id="strategy-full" style="display:none;">{{ last_cycle_details.strategy }} <a class="strategy-toggle" onclick="toggleStrategy()">Show less</a></span>
                 </div>
                 {% endif %}
             </div>
@@ -286,7 +305,8 @@
                     {% if review_queue %}
                     <div class="space-y-2 max-h-80 overflow-y-auto">
                         {% for msg in review_queue[:10] %}
-                        <div class="p-3 rounded-lg border" style="background: var(--surface-1); border-color: var(--border-subtle);">
+                        <div class="p-3 rounded-lg border cursor-pointer" style="background: var(--surface-1); border-color: var(--border-subtle);"
+                             onclick="openReviewModal('{{ msg.id }}', '{{ msg.channel }}', {{ msg.content|tojson }}, {{ (msg.subject or '')|tojson }}, {{ (msg.shop_name or 'Unknown')|tojson }}, {{ (msg.niche or '')|tojson }}, {{ (msg.tier or '')|tojson }}, '{{ msg.score|default(0) }}')">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-xs font-semibold px-2 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);">{{ msg.channel }}</span>
                                 <span class="text-xs" style="color: var(--text-tertiary);">{{ msg.shop_name or 'Unknown' }} — {{ msg.tier or '' }}</span>
@@ -295,14 +315,6 @@
                             <div class="text-xs font-medium mb-1" style="color: var(--text-secondary);">Subject: {{ msg.subject }}</div>
                             {% endif %}
                             <div class="text-xs" style="color: var(--text-primary);">{{ msg.content[:200] }}{% if msg.content|length > 200 %}...{% endif %}</div>
-                            <div class="flex gap-2 mt-2">
-                                <form method="POST" action="/growth/review" style="display:inline;">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="msg_id" value="{{ msg.id }}">
-                                    <button type="submit" name="action" value="approve" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);">Approve</button>
-                                    <button type="submit" name="action" value="reject" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Reject</button>
-                                </form>
-                            </div>
                         </div>
                         {% endfor %}
                     </div>
@@ -460,11 +472,42 @@
         </div>
     </div>
 
+    <!-- Review Modal -->
+    <div class="review-modal-overlay" id="reviewModal" onclick="if(event.target===this)closeReviewModal()">
+        <div class="review-modal">
+            <button class="review-modal-close" onclick="closeReviewModal()">&times;</button>
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-xs font-semibold px-2 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);" id="rm-channel"></span>
+                <span class="text-xs font-bold" id="rm-tier"></span>
+            </div>
+            <div class="mb-3 text-sm" style="color: var(--text-secondary);">
+                <span class="font-semibold" style="color: var(--text-primary);" id="rm-shop"></span>
+                <span id="rm-niche" class="ml-2 text-xs px-1.5 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);"></span>
+                <span id="rm-score" class="ml-2 text-xs"></span>
+            </div>
+            <div id="rm-subject" class="text-xs font-medium mb-2" style="color: var(--text-secondary); display:none;"></div>
+            <div class="p-3 rounded-lg text-sm mb-4" style="background: var(--surface-1); color: var(--text-primary); white-space: pre-wrap;" id="rm-content"></div>
+            <div class="flex gap-2 flex-wrap">
+                <form method="POST" action="/growth/review" style="display:inline;" id="rm-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="msg_id" id="rm-msg-id" value="">
+                    <button type="submit" name="action" value="approve" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);">Approve</button>
+                    <button type="submit" name="action" value="reject" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Reject</button>
+                </form>
+                <form method="POST" action="/growth/rewrite" style="display:inline;" id="rm-rewrite-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="msg_id" id="rm-rewrite-id" value="">
+                    <input type="text" name="instructions" placeholder="Rewrite instructions (optional)" class="text-xs px-3 py-1.5 rounded border" style="background: var(--surface-1); border-color: var(--border-subtle); color: var(--text-primary); width: 180px;">
+                    <button type="submit" class="text-xs px-4 py-1.5 rounded font-semibold" style="background: rgba(99,102,241,0.08); color: #6366f1;">Rewrite</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
     function copyEtsyMsg(msgId, btn) {
         var content = btn.getAttribute('data-content');
         if (!content) return;
-        // Decode HTML entities
         var txt = document.createElement('textarea');
         txt.innerHTML = content;
         navigator.clipboard.writeText(txt.value).then(function() {
@@ -477,5 +520,31 @@
             }, 2000);
         });
     }
+    function toggleStrategy() {
+        var s = document.getElementById('strategy-short');
+        var f = document.getElementById('strategy-full');
+        if (s.style.display === 'none') { s.style.display = ''; f.style.display = 'none'; }
+        else { s.style.display = 'none'; f.style.display = ''; }
+    }
+    function openReviewModal(id, channel, content, subject, shop, niche, tier, score) {
+        document.getElementById('rm-msg-id').value = id;
+        document.getElementById('rm-rewrite-id').value = id;
+        document.getElementById('rm-channel').textContent = channel;
+        document.getElementById('rm-shop').textContent = shop;
+        document.getElementById('rm-niche').textContent = niche || '';
+        document.getElementById('rm-niche').style.display = niche ? '' : 'none';
+        document.getElementById('rm-tier').textContent = (tier || '') + ' ' + (score || '');
+        document.getElementById('rm-tier').className = 'text-xs font-bold ' + (tier === 'HOT' ? 'tier-hot' : tier === 'WARM' ? 'tier-warm' : 'tier-cold');
+        document.getElementById('rm-content').textContent = content;
+        var subEl = document.getElementById('rm-subject');
+        if (subject) { subEl.textContent = 'Subject: ' + subject; subEl.style.display = ''; }
+        else { subEl.style.display = 'none'; }
+        document.getElementById('rm-score').textContent = score ? 'Score: ' + score : '';
+        document.getElementById('reviewModal').classList.add('active');
+    }
+    function closeReviewModal() {
+        document.getElementById('reviewModal').classList.remove('active');
+    }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeReviewModal(); });
     </script>
 {% endblock %}

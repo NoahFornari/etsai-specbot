@@ -1811,6 +1811,66 @@ def growth_review():
     return redirect(url_for("growth_dashboard"))
 
 
+@app.route("/growth/rewrite", methods=["POST"])
+def growth_rewrite():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    msg_id = request.form.get("msg_id")
+    instructions = request.form.get("instructions", "").strip()[:500]
+
+    if not msg_id:
+        flash("Missing message ID", "error")
+        return redirect(url_for("growth_dashboard"))
+
+    from growth.growth_db import get_growth_message, update_message_content
+    msg = get_growth_message(msg_id)
+    if not msg:
+        flash("Message not found", "error")
+        return redirect(url_for("growth_dashboard"))
+
+    # Build context for Claude
+    lead_parts = []
+    if msg.get("shop_name"):
+        lead_parts.append(f"Shop: {msg['shop_name']}")
+    if msg.get("niche"):
+        lead_parts.append(f"Niche: {msg['niche']}")
+    if msg.get("outreach_angle"):
+        lead_parts.append(f"Angle: {msg['outreach_angle']}")
+    lead_context = "\n".join(lead_parts)
+
+    rewrite_prompt = f"""Rewrite this outreach message. Keep the same channel ({msg['channel']}) and tone.
+
+CURRENT MESSAGE:
+{msg['content']}
+
+LEAD INFO:
+{lead_context}
+"""
+    if instructions:
+        rewrite_prompt += f"\nUSER INSTRUCTIONS: {instructions}"
+
+    try:
+        from ai_engine import call_claude, AI_MODEL_CHEAP
+        raw, cost, inp, out = call_claude(rewrite_prompt, AI_MODEL_CHEAP, max_tokens=300,
+            system="Rewrite the outreach message based on the instructions. Output ONLY the rewritten message, nothing else.")
+        update_message_content(msg_id, raw.strip())
+        from growth.growth_db import log_agent_action
+        log_agent_action("writer", "rewrite", True,
+                         {"msg_id": msg_id, "instructions": instructions},
+                         tokens_used=inp + out, cost=cost)
+        flash("Message rewritten", "success")
+    except Exception as e:
+        logger.error("Growth rewrite error: %s", e)
+        flash(f"Rewrite failed: {str(e)[:100]}", "error")
+
+    return redirect(url_for("growth_dashboard"))
+
+
 # =============================================================
 # SEO
 # =============================================================
