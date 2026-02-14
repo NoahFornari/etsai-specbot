@@ -249,12 +249,16 @@ ALL-TIME:
 
 CHANNELS ACTIVE: Email={'ON' if CHANNEL_EMAIL else 'OFF'}, Reddit={'ON' if CHANNEL_REDDIT else 'OFF'}, YouTube={'ON' if CHANNEL_YOUTUBE else 'OFF'}, Etsy Convo={'ON' if CHANNEL_ETSY_CONVO else 'OFF'}
 {playbook}
+IMPORTANT RULES:
+- Scout and Writer must ALWAYS run. Never pause lead discovery — we need a growing pipeline.
+- Listener should always run to find Reddit conversations.
+- The pipeline is: discover leads → draft messages → review queue → send. All stages run every cycle.
+
 Based on these metrics{' and the playbook above' if playbook else ''}, decide:
-1. Which agents should run in the next cycle?
-2. What niches should Scout focus on?
-3. How many emails/Reddit posts should Writer produce?
-4. What video topics should Creator make?
-5. Any strategy changes?
+1. What niches should Scout focus on?
+2. How many emails/Reddit posts should Writer produce?
+3. What video topics should Creator make?
+4. Any strategy observations?
 
 RESPOND IN JSON:
 {{

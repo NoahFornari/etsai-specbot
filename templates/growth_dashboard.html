@@ -311,8 +311,10 @@
                     {% if review_queue %}
                     <div class="space-y-2 max-h-80 overflow-y-auto">
                         {% for msg in review_queue[:10] %}
-                        <div class="p-3 rounded-lg border cursor-pointer" style="background: var(--surface-1); border-color: var(--border-subtle);"
-                             onclick="openReviewModal('{{ msg.id }}', '{{ msg.channel }}', {{ msg.content|tojson }}, {{ (msg.subject or '')|tojson }}, {{ (msg.shop_name or 'Unknown')|tojson }}, {{ (msg.niche or '')|tojson }}, {{ (msg.tier or '')|tojson }}, '{{ msg.score|default(0) }}')">
+                        <div class="p-3 rounded-lg border cursor-pointer review-item" style="background: var(--surface-1); border-color: var(--border-subtle);"
+                             data-id="{{ msg.id }}" data-channel="{{ msg.channel }}" data-subject="{{ (msg.subject or '')|e }}"
+                             data-shop="{{ (msg.shop_name or 'Unknown')|e }}" data-niche="{{ (msg.niche or '')|e }}"
+                             data-tier="{{ msg.tier or '' }}" data-score="{{ msg.score|default(0) }}">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-xs font-semibold px-2 py-0.5 rounded" style="background: var(--brand-bg); color: var(--brand);">{{ msg.channel }}</span>
                                 <span class="text-xs" style="color: var(--text-tertiary);">{{ msg.shop_name or 'Unknown' }} — {{ msg.tier or '' }}</span>
@@ -321,6 +323,7 @@
                             <div class="text-xs font-medium mb-1" style="color: var(--text-secondary);">Subject: {{ msg.subject }}</div>
                             {% endif %}
                             <div class="text-xs" style="color: var(--text-primary);">{{ msg.content[:200] }}{% if msg.content|length > 200 %}...{% endif %}</div>
+                            <div class="review-full-content" style="display:none;">{{ msg.content }}</div>
                         </div>
                         {% endfor %}
                     </div>
@@ -532,22 +535,27 @@
         if (s.style.display === 'none') { s.style.display = ''; f.style.display = 'none'; }
         else { s.style.display = 'none'; f.style.display = ''; }
     }
-    function openReviewModal(id, channel, content, subject, shop, niche, tier, score) {
-        document.getElementById('rm-msg-id').value = id;
-        document.getElementById('rm-rewrite-id').value = id;
-        document.getElementById('rm-channel').textContent = channel;
-        document.getElementById('rm-shop').textContent = shop;
-        document.getElementById('rm-niche').textContent = niche || '';
-        document.getElementById('rm-niche').style.display = niche ? '' : 'none';
-        document.getElementById('rm-tier').textContent = (tier || '') + ' ' + (score || '');
-        document.getElementById('rm-tier').className = 'text-xs font-bold ' + (tier === 'HOT' ? 'tier-hot' : tier === 'WARM' ? 'tier-warm' : 'tier-cold');
-        document.getElementById('rm-content').textContent = content;
-        var subEl = document.getElementById('rm-subject');
-        if (subject) { subEl.textContent = 'Subject: ' + subject; subEl.style.display = ''; }
-        else { subEl.style.display = 'none'; }
-        document.getElementById('rm-score').textContent = score ? 'Score: ' + score : '';
-        document.getElementById('reviewModal').classList.add('active');
-    }
+    // Attach click handlers to review queue items via data attributes
+    document.querySelectorAll('.review-item').forEach(function(el) {
+        el.addEventListener('click', function() {
+            var d = this.dataset;
+            var content = this.querySelector('.review-full-content').textContent;
+            document.getElementById('rm-msg-id').value = d.id;
+            document.getElementById('rm-rewrite-id').value = d.id;
+            document.getElementById('rm-channel').textContent = d.channel;
+            document.getElementById('rm-shop').textContent = d.shop;
+            document.getElementById('rm-niche').textContent = d.niche || '';
+            document.getElementById('rm-niche').style.display = d.niche ? '' : 'none';
+            document.getElementById('rm-tier').textContent = (d.tier || '') + ' ' + (d.score || '');
+            document.getElementById('rm-tier').className = 'text-xs font-bold ' + (d.tier === 'HOT' ? 'tier-hot' : d.tier === 'WARM' ? 'tier-warm' : 'tier-cold');
+            document.getElementById('rm-content').textContent = content;
+            var subEl = document.getElementById('rm-subject');
+            if (d.subject) { subEl.textContent = 'Subject: ' + d.subject; subEl.style.display = ''; }
+            else { subEl.style.display = 'none'; }
+            document.getElementById('rm-score').textContent = d.score ? 'Score: ' + d.score : '';
+            document.getElementById('reviewModal').classList.add('active');
+        });
+    });
     function closeReviewModal() {
         document.getElementById('reviewModal').classList.remove('active');
     }
