@@ -36,6 +36,8 @@
     .tier-cold { color: #3b82f6; font-weight: 600; }
     .strategy-toggle { cursor: pointer; color: var(--brand); font-weight: 600; }
     .strategy-toggle:hover { text-decoration: underline; }
+    .etsy-msg-content:hover { background: var(--surface-2); border-radius: 6px; }
+    .etsy-msg-content { padding: 4px 6px; margin: -4px -6px; transition: background 0.15s; }
     /* Review modal */
     .review-modal-overlay {
         display: none; position: fixed; inset: 0; z-index: 100;
@@ -406,23 +408,27 @@
                     {% if etsy_queue %}
                     <div class="space-y-2 max-h-96 overflow-y-auto">
                         {% for msg in etsy_queue %}
-                        <div class="p-3 rounded-lg border" style="background: var(--surface-1); border-color: var(--border-subtle);" id="etsy-msg-{{ msg.id }}">
+                        <div class="p-3 rounded-lg border etsy-outreach-item" style="background: var(--surface-1); border-color: var(--border-subtle);" id="etsy-msg-{{ msg.id }}">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-sm font-semibold" style="color: var(--text-primary);">{{ msg.shop_name or 'Unknown' }}</span>
                                 <span class="text-xs font-bold {% if msg.tier == 'HOT' %}tier-hot{% elif msg.tier == 'WARM' %}tier-warm{% else %}tier-cold{% endif %}">{{ msg.tier or '' }} {{ msg.score or '' }}</span>
                             </div>
-                            <div class="text-xs mb-2" style="color: var(--text-primary);">{{ msg.content[:250] }}{% if msg.content|length > 250 %}...{% endif %}</div>
-                            <div class="flex gap-2 flex-wrap">
-                                <button onclick="copyEtsyMsg('{{ msg.id }}', this)" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--brand-bg); color: var(--brand);" data-content="{{ msg.content|e }}">Copy</button>
+                            <div class="text-xs mb-2 etsy-msg-content" style="color: var(--text-primary); cursor:pointer;" title="Click to copy message"
+                                 onclick="copyEtsyMsg('{{ msg.id }}', this)">{{ msg.content }}</div>
+                            <div class="flex gap-2 flex-wrap items-center">
+                                {% if msg.shop_name %}
+                                <a href="https://www.etsy.com/conversations?ref=hdr&search_query={{ msg.shop_name|urlencode }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--brand-bg); color: var(--brand);">Message on Etsy</a>
+                                {% endif %}
                                 {% if msg.shop_url %}
-                                <a href="{{ msg.shop_url }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--surface-2); color: var(--text-secondary);">Open Shop</a>
+                                <a href="{{ msg.shop_url }}" target="_blank" rel="noopener" class="text-xs px-3 py-1 rounded font-semibold no-underline" style="background: var(--surface-2); color: var(--text-secondary);">Shop</a>
                                 {% endif %}
                                 <form method="POST" action="/growth/review" style="display:inline;">
                                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="msg_id" value="{{ msg.id }}">
-                                    <button type="submit" name="action" value="mark_sent" class="text-xs px-3 py-1 rounded font-semibold" style="background: rgba(5,150,105,0.08); color: #059669;">Mark Sent</button>
+                                    <button type="submit" name="action" value="mark_sent" class="text-xs px-3 py-1 rounded font-semibold" style="background: rgba(5,150,105,0.08); color: #059669;">Sent</button>
                                     <button type="submit" name="action" value="reject" class="text-xs px-3 py-1 rounded font-semibold" style="background: var(--error-bg); color: var(--error);">Skip</button>
                                 </form>
+                                <span class="etsy-copy-status text-xs font-semibold" style="color: #059669; display:none;">Copied!</span>
                             </div>
                         </div>
                         {% endfor %}
@@ -514,19 +520,14 @@
     </div>
 
     <script>
-    function copyEtsyMsg(msgId, btn) {
-        var content = btn.getAttribute('data-content');
+    function copyEtsyMsg(msgId, el) {
+        var card = el.closest('.etsy-outreach-item');
+        var content = card.querySelector('.etsy-msg-content').textContent.trim();
         if (!content) return;
-        var txt = document.createElement('textarea');
-        txt.innerHTML = content;
-        navigator.clipboard.writeText(txt.value).then(function() {
-            var orig = btn.textContent;
-            btn.textContent = 'Copied!';
-            btn.style.background = 'rgba(5,150,105,0.12)';
-            setTimeout(function() {
-                btn.textContent = orig;
-                btn.style.background = '';
-            }, 2000);
+        navigator.clipboard.writeText(content).then(function() {
+            var status = card.querySelector('.etsy-copy-status');
+            status.style.display = '';
+            setTimeout(function() { status.style.display = 'none'; }, 2000);
         });
     }
     function toggleStrategy() {

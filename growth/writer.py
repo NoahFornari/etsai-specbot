@@ -445,6 +445,80 @@ def send_email(message):
         return False
 
 
+def send_reddit(message):
+    """Post a Reddit reply or value post using PRAW."""
+    from growth.growth_config import (
+        REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET,
+        REDDIT_USERNAME, REDDIT_PASSWORD,
+    )
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        logger.warning("Writer: Reddit API not configured — skipping")
+        return False
+
+    try:
+        import praw
+    except ImportError:
+        logger.warning("Writer: praw not installed — skipping Reddit send")
+        return False
+
+    try:
+        reddit = praw.Reddit(
+            client_id=REDDIT_CLIENT_ID,
+            client_secret=REDDIT_CLIENT_SECRET,
+            username=REDDIT_USERNAME,
+            password=REDDIT_PASSWORD,
+            user_agent=os.getenv("REDDIT_USER_AGENT", "ETSAI-GrowthBot/1.0"),
+        )
+
+        channel = message["channel"]
+        if channel == "reddit_reply":
+            # We need the thread URL to reply — stored in lead enrichment_data
+            lead = get_growth_lead(message["lead_id"]) if message.get("lead_id") else None
+            enrichment = {}
+            if lead:
+                enrichment = lead.get("enrichment_data", {})
+                if isinstance(enrichment, str):
+                    import json as _json
+                    enrichment = _json.loads(enrichment)
+
+            thread_url = enrichment.get("url") or enrichment.get("thread_url", "")
+            if not thread_url:
+                logger.warning(f"Writer: No thread URL for Reddit reply {message['id']}")
+                update_message_status(message["id"], "bounced")
+                return False
+
+            submission = reddit.submission(url=thread_url)
+            submission.reply(message["content"])
+
+        elif channel == "reddit_post":
+            # Post to a target subreddit
+            subreddit_name = "EtsySellers"  # Default target
+            lead = get_growth_lead(message["lead_id"]) if message.get("lead_id") else None
+            if lead:
+                enrichment = lead.get("enrichment_data", {})
+                if isinstance(enrichment, str):
+                    import json as _json
+                    enrichment = _json.loads(enrichment)
+                subreddit_name = enrichment.get("subreddit", subreddit_name)
+
+            subreddit = reddit.subreddit(subreddit_name)
+            title = message.get("subject", "Tips for managing custom orders on Etsy")
+            subreddit.submit(title, selftext=message["content"])
+
+        update_message_status(message["id"], "sent")
+        if message.get("lead_id"):
+            update_lead_status(message["lead_id"], "contacted")
+        if message.get("campaign_id"):
+            update_campaign_stats(message["campaign_id"], messages_sent=1)
+        logger.info(f"Writer: Reddit {channel} sent for message {message['id']}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Writer Reddit send error: {e}")
+        update_message_status(message["id"], "bounced")
+        return False
+
+
 def process_send_queue():
     """Process queued messages that have been approved for sending."""
     start = time.time()
@@ -483,9 +557,8 @@ def process_send_queue():
             # Only mark sent when explicitly approved from dashboard.
             pass
         elif channel in ("reddit_reply", "reddit_post"):
-            # Reddit posting requires PRAW — mark as sent (manual posting for now)
-            update_message_status(row["id"], "sent")
-            sent[channel] = sent.get(channel, 0) + 1
+            if send_reddit(row):
+                sent[channel] = sent.get(channel, 0) + 1
         elif channel == "dm":
             # DMs are manual — mark as sent when copied
             update_message_status(row["id"], "sent")
