@@ -2177,6 +2177,12 @@ def compare_page(competitor):
 # ABOUT & CHANGELOG
 # =============================================================
 
+@app.route("/links")
+def links_page():
+    """Link-in-bio page for social media profiles."""
+    return render_template("links.html")
+
+
 @app.route("/about")
 def about_page():
     return render_template("about.html", page=ABOUT_PAGE)
