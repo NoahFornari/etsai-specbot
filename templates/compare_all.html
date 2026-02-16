@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page.title }} | ETSAI</title>
-    <meta name="description" content="{{ page.meta_description }}">
-    <meta property="og:title" content="{{ page.title }}">
-    <meta property="og:description" content="{{ page.meta_description }}">
+    <title>Compare ETSAI — vs Google Forms, Etsy Messages, Typeform</title>
+    <meta name="description" content="See how ETSAI stacks up against Google Forms, Etsy Messages, and Typeform for collecting custom order specs from Etsy buyers.">
+    <meta property="og:title" content="Compare ETSAI to the Alternatives">
+    <meta property="og:description" content="Feature-by-feature comparison: ETSAI vs Google Forms, Etsy Messages, and Typeform.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://etsai.io/compare/{{ page.slug }}">
+    <meta property="og:url" content="https://etsai.io/compare">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="canonical" href="https://etsai.io/compare/{{ page.slug }}">
+    <link rel="canonical" href="https://etsai.io/compare">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
     <script>
       if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
@@ -36,7 +36,7 @@
         @media (prefers-reduced-motion: reduce) { .gradient-blob { animation: none !important; } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .animate-in { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
-        .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; } .delay-4 { animation-delay: 0.4s; }
+        .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
         .gradient-text { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .btn-primary { clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px); background: linear-gradient(135deg, #4a6741, #5c7d52); color: white; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 2px 6px rgba(74, 103, 65, 0.3)); }
         .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.05) drop-shadow(0 4px 10px rgba(74, 103, 65, 0.35)); }
@@ -45,6 +45,8 @@
         .home-nav { backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); background: rgba(245, 239, 228, 0.6); border-color: var(--border-default); }
         html.dark .home-nav { background: rgba(28, 25, 23, 0.6); }
         .check { color: var(--brand); } .cross { color: #dc2626; }
+        .jump-link { display: inline-block; padding: 0.5rem 1.25rem; font-size: 0.8125rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-default); color: var(--text-primary); text-decoration: none; transition: all 0.2s; }
+        .jump-link:hover { border-color: var(--brand); color: var(--brand); }
     </style>
 </head>
 <body class="font-sans min-h-screen">
@@ -71,107 +73,125 @@
 
     <div class="max-w-4xl mx-auto px-6 pt-24 pb-16 relative">
         <!-- Hero -->
-        <div class="text-center mb-12 animate-in">
-            <p class="text-sm font-semibold tracking-wide uppercase mb-4" style="color: var(--brand);">Comparison</p>
-            <h1 class="font-display text-4xl md:text-5xl mb-4" style="color: var(--text-primary);">ETSAI vs {{ page.competitor_name }}</h1>
-            <p class="text-base max-w-2xl mx-auto" style="color: var(--text-secondary);">{{ page.competitor_tagline }}</p>
+        <div class="text-center mb-10 animate-in">
+            <p class="text-sm font-semibold tracking-wide uppercase mb-4" style="color: var(--brand);">Comparisons</p>
+            <h1 class="font-display text-4xl md:text-5xl mb-4" style="color: var(--text-primary);">How ETSAI Compares</h1>
+            <p class="text-base max-w-2xl mx-auto" style="color: var(--text-secondary);">See how ETSAI stacks up against the tools Etsy sellers commonly use for custom order spec collection.</p>
         </div>
 
-        <!-- Feature comparison table -->
-        <div class="feature-card overflow-x-auto mb-12 animate-in delay-1" style="padding: 0;">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr style="background: var(--surface-2);">
-                        <th class="text-left p-4 font-semibold" style="color: var(--text-primary);">Feature</th>
-                        <th class="text-center p-4 font-semibold" style="color: var(--brand);">ETSAI</th>
-                        <th class="text-center p-4 font-semibold" style="color: var(--text-primary);">{{ page.competitor_name }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for f in page.features %}
-                    <tr style="border-top: 1px solid var(--border-subtle);">
-                        <td class="p-4 font-medium" style="color: var(--text-primary);">{{ f.name }}</td>
-                        <td class="p-4 text-center">
-                            {% if f.etsai == true %}
-                                <span class="check text-lg">&#x2713;</span>
-                            {% elif f.etsai == false %}
-                                <span class="cross text-lg">&#x2715;</span>
-                            {% else %}
-                                <span class="text-xs" style="color: var(--text-secondary);">{{ f.etsai }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="p-4 text-center">
-                            {% if f.competitor == true %}
-                                <span class="check text-lg">&#x2713;</span>
-                            {% elif f.competitor == false %}
-                                <span class="cross text-lg">&#x2715;</span>
-                            {% else %}
-                                <span class="text-xs" style="color: var(--text-secondary);">{{ f.competitor }}</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Jump links -->
+        <div class="flex flex-wrap justify-center gap-3 mb-14 animate-in delay-1">
+            {% for page in pages %}
+            <a href="#{{ page.slug }}" class="jump-link">vs {{ page.competitor_name }}</a>
+            {% endfor %}
         </div>
 
-        <!-- Pros and Cons -->
-        <div class="grid md:grid-cols-2 gap-6 mb-12">
-            <!-- ETSAI pros -->
-            <div class="animate-in delay-2">
-                <h2 class="font-display text-xl mb-4" style="color: var(--text-primary);">ETSAI strengths</h2>
-                <div class="feature-card">
-                    <ul class="space-y-3" style="list-style: none; padding: 0; margin: 0;">
-                        {% for pro in page.pros_etsai %}
-                        <li class="flex items-start gap-2.5 text-sm leading-relaxed" style="color: var(--text-secondary);">
-                            <span class="check mt-0.5 shrink-0">&#x2713;</span> {{ pro }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% if page.cons_etsai %}
-                    <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
-                        <p class="text-xs font-semibold mb-2" style="color: var(--text-tertiary);">Trade-offs:</p>
-                        <ul class="space-y-1.5" style="list-style: none; padding: 0; margin: 0;">
-                            {% for con in page.cons_etsai %}
-                            <li class="text-xs" style="color: var(--text-tertiary);">{{ con }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
+        {% for page in pages %}
+        <!-- {{ page.competitor_name }} -->
+        <section id="{{ page.slug }}" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-8">
+                <h2 class="font-display text-2xl md:text-3xl mb-2" style="color: var(--text-primary);">ETSAI vs {{ page.competitor_name }}</h2>
+                <p class="text-sm" style="color: var(--text-secondary);">{{ page.competitor_tagline }}</p>
             </div>
 
-            <!-- Competitor pros -->
-            <div class="animate-in delay-3">
-                <h2 class="font-display text-xl mb-4" style="color: var(--text-primary);">{{ page.competitor_name }} strengths</h2>
-                <div class="feature-card">
-                    <ul class="space-y-3" style="list-style: none; padding: 0; margin: 0;">
-                        {% for pro in page.pros_competitor %}
-                        <li class="flex items-start gap-2.5 text-sm leading-relaxed" style="color: var(--text-secondary);">
-                            <span class="check mt-0.5 shrink-0">&#x2713;</span> {{ pro }}
-                        </li>
+            <!-- Feature table -->
+            <div class="feature-card overflow-x-auto mb-8" style="padding: 0;">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr style="background: var(--surface-2);">
+                            <th class="text-left p-4 font-semibold" style="color: var(--text-primary);">Feature</th>
+                            <th class="text-center p-4 font-semibold" style="color: var(--brand);">ETSAI</th>
+                            <th class="text-center p-4 font-semibold" style="color: var(--text-primary);">{{ page.competitor_name }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in page.features %}
+                        <tr style="border-top: 1px solid var(--border-subtle);">
+                            <td class="p-4 font-medium" style="color: var(--text-primary);">{{ f.name }}</td>
+                            <td class="p-4 text-center">
+                                {% if f.etsai == true %}
+                                    <span class="check text-lg">&#x2713;</span>
+                                {% elif f.etsai == false %}
+                                    <span class="cross text-lg">&#x2715;</span>
+                                {% else %}
+                                    <span class="text-xs" style="color: var(--text-secondary);">{{ f.etsai }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4 text-center">
+                                {% if f.competitor == true %}
+                                    <span class="check text-lg">&#x2713;</span>
+                                {% elif f.competitor == false %}
+                                    <span class="cross text-lg">&#x2715;</span>
+                                {% else %}
+                                    <span class="text-xs" style="color: var(--text-secondary);">{{ f.competitor }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </ul>
-                    {% if page.cons_competitor %}
-                    <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
-                        <p class="text-xs font-semibold mb-2" style="color: var(--text-tertiary);">Limitations:</p>
-                        <ul class="space-y-1.5" style="list-style: none; padding: 0; margin: 0;">
-                            {% for con in page.cons_competitor %}
-                            <li class="flex items-start gap-2 text-xs" style="color: var(--text-tertiary);">
-                                <span class="cross shrink-0">&#x2715;</span> {{ con }}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pros/Cons side by side -->
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <h3 class="font-display text-lg mb-3" style="color: var(--text-primary);">ETSAI strengths</h3>
+                    <div class="feature-card">
+                        <ul class="space-y-3" style="list-style: none; padding: 0; margin: 0;">
+                            {% for pro in page.pros_etsai %}
+                            <li class="flex items-start gap-2.5 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                                <span class="check mt-0.5 shrink-0">&#x2713;</span> {{ pro }}
                             </li>
                             {% endfor %}
                         </ul>
+                        {% if page.cons_etsai %}
+                        <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
+                            <p class="text-xs font-semibold mb-2" style="color: var(--text-tertiary);">Trade-offs:</p>
+                            <ul class="space-y-1.5" style="list-style: none; padding: 0; margin: 0;">
+                                {% for con in page.cons_etsai %}
+                                <li class="text-xs" style="color: var(--text-tertiary);">{{ con }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
+                </div>
+                <div>
+                    <h3 class="font-display text-lg mb-3" style="color: var(--text-primary);">{{ page.competitor_name }} strengths</h3>
+                    <div class="feature-card">
+                        <ul class="space-y-3" style="list-style: none; padding: 0; margin: 0;">
+                            {% for pro in page.pros_competitor %}
+                            <li class="flex items-start gap-2.5 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                                <span class="check mt-0.5 shrink-0">&#x2713;</span> {{ pro }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if page.cons_competitor %}
+                        <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
+                            <p class="text-xs font-semibold mb-2" style="color: var(--text-tertiary);">Limitations:</p>
+                            <ul class="space-y-1.5" style="list-style: none; padding: 0; margin: 0;">
+                                {% for con in page.cons_competitor %}
+                                <li class="flex items-start gap-2 text-xs" style="color: var(--text-tertiary);">
+                                    <span class="cross shrink-0">&#x2715;</span> {{ con }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Verdict -->
-        <div class="feature-card text-center mb-12 animate-in delay-4" style="padding: 2.5rem 2rem; border-left: 3px solid var(--brand);">
-            <h2 class="font-display text-xl mb-3" style="color: var(--text-primary);">The verdict</h2>
-            <p class="text-sm leading-relaxed max-w-2xl mx-auto mb-6" style="color: var(--text-secondary);">{{ page.verdict }}</p>
+            <!-- Verdict -->
+            <div class="feature-card text-center" style="padding: 1.75rem 1.5rem; border-left: 3px solid var(--brand);">
+                <p class="text-xs font-semibold uppercase tracking-wide mb-2" style="color: var(--brand);">Verdict</p>
+                <p class="text-sm leading-relaxed max-w-2xl mx-auto" style="color: var(--text-secondary);">{{ page.verdict }}</p>
+            </div>
+        </section>
+        {% endfor %}
+
+        <!-- Final CTA -->
+        <div class="text-center mb-12">
             <a href="/#auth" class="btn-primary px-8 py-3 text-sm font-semibold inline-block no-underline">Start Free — 14 Day Trial</a>
             <p class="text-xs mt-3" style="color: var(--text-tertiary);">No credit card required.</p>
         </div>

@@ -1932,8 +1932,7 @@ def sitemap_xml():
     urls.append((base + "/blog", "0.8"))
     for slug in BLOG_POSTS:
         urls.append((base + f"/blog/{slug}", "0.7"))
-    for comp in COMPARISON_PAGES:
-        urls.append((base + f"/compare/{comp}", "0.7"))
+    urls.append((base + "/compare", "0.8"))
     urls.append((base + "/about", "0.5"))
     urls.append((base + "/changelog", "0.4"))
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -2159,13 +2158,19 @@ def blog_post(slug):
 # COMPARISON PAGES
 # =============================================================
 
+@app.route("/compare")
+def compare_all():
+    """All comparisons on one page."""
+    pages = list(COMPARISON_PAGES.values())
+    return render_template("compare_all.html", pages=pages)
+
+
 @app.route("/compare/<competitor>")
 def compare_page(competitor):
-    """ETSAI vs competitor comparison pages."""
-    page = COMPARISON_PAGES.get(competitor)
-    if not page:
+    """Individual comparison — redirect to unified page."""
+    if competitor not in COMPARISON_PAGES:
         abort(404)
-    return render_template("compare.html", page=page)
+    return redirect(url_for("compare_all") + f"#{competitor}", code=301)
 
 
 # =============================================================
