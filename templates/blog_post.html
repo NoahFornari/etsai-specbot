@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }} | ETSAI Blog</title>
+    <meta name="description" content="{{ post.meta_description }}">
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ post.meta_description }}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://etsai.io/blog/{{ post.slug }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ post.title }}">
+    <meta name="twitter:description" content="{{ post.meta_description }}">
+    <link rel="canonical" href="https://etsai.io/blog/{{ post.slug }}">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "{{ post.title }}",
+        "author": {"@type": "Person", "name": "{{ post.author }}"},
+        "datePublished": "{{ post.published_date }}",
+        "description": "{{ post.meta_description }}",
+        "publisher": {"@type": "Organization", "name": "ETSAI", "url": "https://etsai.io"}
+    }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='12' cy='22' rx='9' ry='5' transform='rotate(-25 12 22)' fill='%235c7d52'/><ellipse cx='20' cy='27' rx='10' ry='7' fill='%234a6741'/><ellipse cx='23' cy='29' rx='7' ry='5' fill='%23f4845f'/><circle cx='27' cy='15' r='9' fill='%234a6741'/><path d='M35 13L48 11.5L35 16.5Z' fill='%23d4846a'/><circle cx='31' cy='13' r='3' fill='white'/><circle cx='32' cy='13' r='1.8' fill='%232c1810'/><circle cx='32.5' cy='12' r='0.7' fill='white'/><path d='M8 31L3 38L7 34L4 41L9 33' fill='%233d5a37'/></svg>">
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['DM Serif Display', 'Georgia', 'serif'] },
+          colors: {
+            forest: { 400: '#5c7d52', 500: '#4a6741', 600: '#3d5a37' },
+            sage: { 400: '#8fa382', 500: '#7a8c6e' },
+            cream: { 50: '#f5efe4', 100: '#ebe3d4', 200: '#dfd4c4' },
+            bark: { 800: '#292524', 900: '#1c1917' },
+          }
+        }}
+      }
+    </script>
+    <style>
+        :root {
+            --surface-0: #fdf9f3; --surface-1: #f5efe4; --surface-2: #ebe3d4; --surface-3: #dfd4c4;
+            --text-primary: #2c1810; --text-secondary: #78716c; --text-tertiary: #a8a29e;
+            --border-default: #d5c8b4; --border-subtle: #e6dbd0;
+            --brand: #4a6741; --brand-light: #5c7d52; --brand-lighter: #7a9b6f;
+        }
+        html.dark {
+            --surface-0: #1c1917; --surface-1: #171412; --surface-2: #292524; --surface-3: #3b3532;
+            --text-primary: #ede6df; --text-secondary: #b5a898; --text-tertiary: #78716c;
+            --border-default: #3b3532; --border-subtle: #292524;
+            --brand: #6b9460; --brand-light: #8aaf7e; --brand-lighter: #a8c89e;
+        }
+        body { background: var(--surface-1); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+        .gradient-mesh { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+        .gradient-blob { position: absolute; filter: blur(80px); will-change: transform; opacity: 0.4; }
+        html.dark .gradient-blob { opacity: 0.18; }
+        .blob-1 { width: 700px; height: 250px; top: -5%; right: -5%; background: radial-gradient(ellipse, #f4845f 0%, transparent 70%); animation: drift1 26s ease-in-out infinite; }
+        .blob-2 { width: 250px; height: 600px; top: 20%; left: -5%; background: radial-gradient(ellipse, #fbb98c 0%, transparent 70%); opacity: 0.35; animation: drift2 22s ease-in-out infinite; }
+        html.dark .blob-2 { opacity: 0.15; }
+        @keyframes drift1 { 0%, 100% { transform: rotate(-12deg) translate(0, 0) scale(1); } 33% { transform: rotate(-8deg) translate(-40px, 30px) scale(1.05); } 66% { transform: rotate(-16deg) translate(20px, -20px) scale(0.95); } }
+        @keyframes drift2 { 0%, 100% { transform: rotate(18deg) translate(0, 0) scale(1); } 33% { transform: rotate(22deg) translate(30px, -20px) scale(1.08); } 66% { transform: rotate(14deg) translate(-15px, 25px) scale(0.92); } }
+        @media (prefers-reduced-motion: reduce) { .gradient-blob { animation: none !important; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+        .gradient-text { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, var(--brand-lighter) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .btn-primary { clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px); background: linear-gradient(135deg, #4a6741, #5c7d52); color: white; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 2px 6px rgba(74, 103, 65, 0.3)); }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.05) drop-shadow(0 4px 10px rgba(74, 103, 65, 0.35)); }
+        .feature-card { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 1.75rem; clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 1px 3px rgba(44, 24, 16, 0.04)) drop-shadow(0 4px 16px rgba(44, 24, 16, 0.03)); }
+        html.dark .feature-card { background: rgba(28, 25, 23, 0.55); border-color: rgba(255, 255, 255, 0.06); }
+        .home-nav { backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); background: rgba(245, 239, 228, 0.6); border-color: var(--border-default); }
+        html.dark .home-nav { background: rgba(28, 25, 23, 0.6); }
+
+        /* Article typography */
+        .article-body h2 { font-family: 'DM Serif Display', Georgia, serif; font-size: 1.5rem; color: var(--text-primary); margin: 2.5rem 0 1rem; }
+        .article-body p { font-size: 0.9375rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 1.25rem; }
+        .article-body ul, .article-body ol { margin: 1rem 0 1.25rem 1.5rem; color: var(--text-secondary); }
+        .article-body li { margin-bottom: 0.5rem; font-size: 0.9375rem; line-height: 1.75; }
+        .article-body strong { color: var(--text-primary); }
+        .article-body a { color: var(--brand); text-decoration: none; font-weight: 500; }
+        .article-body a:hover { text-decoration: underline; }
+        .article-body blockquote { border-left: 3px solid var(--brand); padding: 0.75rem 1.25rem; margin: 1.5rem 0; background: rgba(74, 103, 65, 0.05); font-style: italic; border-radius: 0 8px 8px 0; }
+        html.dark .article-body blockquote { background: rgba(74, 103, 65, 0.1); }
+        .article-body blockquote p { color: var(--text-primary); margin-bottom: 0.75rem; }
+        .article-body blockquote p:last-child { margin-bottom: 0; }
+
+        /* Comparison table */
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .comparison-table th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; background: var(--surface-2); color: var(--text-primary); }
+        .comparison-table td { padding: 0.75rem 1rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); }
+        .comparison-table tr:last-child td { font-weight: 600; color: var(--brand); }
+    </style>
+</head>
+<body class="font-sans min-h-screen">
+    <div class="gradient-mesh" aria-hidden="true">
+        <div class="gradient-blob blob-1"></div>
+        <div class="gradient-blob blob-2"></div>
+    </div>
+
+    <nav class="home-nav fixed top-0 left-0 right-0 z-50 border-b">
+        <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-1.5 text-xl font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-6 h-6" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <div class="flex items-center gap-5">
+                <a href="/blog" class="hidden md:inline text-sm font-medium no-underline transition-colors" style="color: var(--text-secondary);">Blog</a>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg transition-colors" style="color: var(--text-tertiary);" aria-label="Toggle dark mode">
+                    <svg class="w-4.5 h-4.5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg class="w-4.5 h-4.5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+                <a href="/#auth" class="btn-primary px-5 py-2 text-sm font-semibold no-underline inline-block">Start Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto px-6 pt-24 pb-16 relative">
+        <!-- Breadcrumb -->
+        <div class="text-xs mb-8 animate-in" style="color: var(--text-tertiary);">
+            <a href="/" class="no-underline" style="color: var(--text-tertiary);">Home</a>
+            <span class="mx-1.5">/</span>
+            <a href="/blog" class="no-underline" style="color: var(--text-tertiary);">Blog</a>
+            <span class="mx-1.5">/</span>
+            <span style="color: var(--text-secondary);">{{ post.title }}</span>
+        </div>
+
+        <!-- Article header -->
+        <header class="mb-10 animate-in">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="inline-block px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide rounded" style="background: rgba(74, 103, 65, 0.1); color: var(--brand);">{{ post.category }}</span>
+                <span class="text-xs" style="color: var(--text-tertiary);">{{ post.read_time }}</span>
+            </div>
+            <h1 class="font-display text-3xl md:text-4xl mb-4 leading-tight" style="color: var(--text-primary);">{{ post.title }}</h1>
+            <div class="flex items-center gap-2 text-xs" style="color: var(--text-tertiary);">
+                <span>{{ post.author }}</span>
+                <span>&middot;</span>
+                <span>{{ post.published_date }}</span>
+            </div>
+        </header>
+
+        <!-- Article body -->
+        <div class="article-body animate-in" style="animation-delay: 0.15s;">
+            {% for section in post.sections %}
+                {% if section.heading %}
+                    <h2>{{ section.heading }}</h2>
+                {% endif %}
+
+                {% if section.content == "TABLE" and post.comparison_table is defined %}
+                    <div class="feature-card overflow-x-auto my-8" style="padding: 0;">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    {% for header in post.comparison_table.headers %}
+                                    <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in post.comparison_table.rows %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    {{ section.content | safe }}
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Related posts -->
+        {% if related %}
+        <div class="mt-16 pt-10 border-t" style="border-color: var(--border-default);">
+            <h3 class="font-display text-xl mb-6" style="color: var(--text-primary);">More from the blog</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                {% for r in related %}
+                <a href="/blog/{{ r.slug }}" class="feature-card block no-underline" style="padding: 1.25rem 1.5rem;">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--brand);">{{ r.category }}</span>
+                    <h4 class="text-sm font-semibold mt-1.5 mb-1" style="color: var(--text-primary);">{{ r.title }}</h4>
+                    <p class="text-xs" style="color: var(--text-tertiary);">{{ r.read_time }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="text-center mt-20 pt-8 border-t" style="border-color: var(--border-default);">
+            <a href="/" class="flex items-center justify-center gap-1.5 text-lg font-extrabold tracking-tight no-underline" style="color: var(--text-primary);"><svg class="w-5 h-5" viewBox="0 0 48 48" fill="none"><ellipse cx="12" cy="22" rx="9" ry="5" transform="rotate(-25 12 22)" fill="#5c7d52"/><ellipse cx="20" cy="27" rx="10" ry="7" fill="#4a6741"/><ellipse cx="23" cy="29" rx="7" ry="5" fill="#f4845f"/><circle cx="27" cy="15" r="9" fill="#4a6741"/><path d="M35 13L48 11.5L35 16.5Z" fill="#d4846a"/><circle cx="31" cy="13" r="3" fill="white"/><circle cx="32" cy="13" r="1.8" fill="#2c1810"/><circle cx="32.5" cy="12" r="0.7" fill="white"/><path d="M8 31L3 38L7 34L4 41L9 33" fill="#3d5a37"/></svg><span>ETS<span class="gradient-text">AI</span></span></a>
+            <p class="text-xs mt-2 mb-2" style="color: var(--text-tertiary);">Your AI assistant for custom orders</p>
+            <div class="flex justify-center gap-4 mb-2">
+                <a href="/blog" class="text-xs no-underline" style="color: var(--brand);">Blog</a>
+                <a href="/about" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">About</a>
+                <a href="/changelog" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Changelog</a>
+                <a href="/privacy" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Privacy</a>
+                <a href="/terms" class="text-xs no-underline transition-colors" style="color: var(--text-tertiary);" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-tertiary)'">Terms</a>
+            </div>
+            <p class="text-xs" style="color: var(--text-tertiary);">Not affiliated with Etsy, Inc.</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        }
+    </script>
+</body>
+</html>

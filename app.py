@@ -31,17 +31,19 @@ from database import (
     get_all_sellers, get_admin_stats,
     generate_referral_code, set_referral_code, get_seller_by_referral_code,
     record_referral, get_referral_count, get_referrals, apply_referral_reward,
+    set_onboard_email_stage, get_sellers_needing_onboard_email,
 )
 from ai_engine import (
     generate_greeting, process_buyer_message, generate_followup,
     generate_intake_questions, validate_answer
 )
 from scraper import scrape_etsy_listing, scrape_etsy_shop
-from email_service import send_completion_email, send_escalation_email, send_password_reset_email
+from email_service import send_completion_email, send_escalation_email, send_password_reset_email, send_welcome_email
 from etsy_api import (
     generate_pkce_pair, get_oauth_url, exchange_code_for_tokens,
     get_shop_for_user, get_shop_listings, get_recent_orders
 )
+from marketing_content import BLOG_POSTS, COMPARISON_PAGES, CHANGELOG_ENTRIES, ABOUT_PAGE
 from billing import (
     PLANS, get_plan, create_checkout_session, create_portal_session,
     handle_webhook_event, check_quota, get_usage_display,
@@ -234,6 +236,12 @@ def signup():
 
     session["seller_id"] = seller_id
     logger.info("New seller signed up: %s", email)
+
+    # Send welcome email and mark stage 1
+    base_url = request.url_root.rstrip("/")
+    send_welcome_email(email, shop_name, base_url)
+    set_onboard_email_stage(seller_id, 1)
+
     flash(f"Welcome to ETSAI, {shop_name}! Your 14-day free trial has started.", "success")
     return redirect(url_for("dashboard"))
 
@@ -1905,7 +1913,7 @@ LEAD INFO:
 
 @app.route("/robots.txt")
 def robots_txt():
-    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /growth\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
+    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nAllow: /blog/\nAllow: /compare/\nAllow: /about\nAllow: /changelog\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /growth\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
     return Response(content, mimetype="text/plain")
 
 
@@ -1921,6 +1929,13 @@ def sitemap_xml():
     ]
     for niche_slug in NICHE_PAGES:
         urls.append((base + f"/for/{niche_slug}", "0.8"))
+    urls.append((base + "/blog", "0.8"))
+    for slug in BLOG_POSTS:
+        urls.append((base + f"/blog/{slug}", "0.7"))
+    for comp in COMPARISON_PAGES:
+        urls.append((base + f"/compare/{comp}", "0.7"))
+    urls.append((base + "/about", "0.5"))
+    urls.append((base + "/changelog", "0.4"))
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for url, priority in urls:
@@ -2117,6 +2132,54 @@ def niche_landing(niche):
     if not page:
         abort(404)
     return render_template("niche_landing.html", page=page, niche=niche)
+
+
+# =============================================================
+# BLOG
+# =============================================================
+
+@app.route("/blog")
+def blog_index():
+    """Blog listing page — all posts, most recent first."""
+    posts = sorted(BLOG_POSTS.values(), key=lambda p: p["published_date"], reverse=True)
+    return render_template("blog_list.html", posts=posts)
+
+
+@app.route("/blog/<slug>")
+def blog_post(slug):
+    """Individual blog post."""
+    post = BLOG_POSTS.get(slug)
+    if not post:
+        abort(404)
+    other_posts = [p for s, p in BLOG_POSTS.items() if s != slug][:2]
+    return render_template("blog_post.html", post=post, related=other_posts)
+
+
+# =============================================================
+# COMPARISON PAGES
+# =============================================================
+
+@app.route("/compare/<competitor>")
+def compare_page(competitor):
+    """ETSAI vs competitor comparison pages."""
+    page = COMPARISON_PAGES.get(competitor)
+    if not page:
+        abort(404)
+    return render_template("compare.html", page=page)
+
+
+# =============================================================
+# ABOUT & CHANGELOG
+# =============================================================
+
+@app.route("/about")
+def about_page():
+    return render_template("about.html", page=ABOUT_PAGE)
+
+
+@app.route("/changelog")
+def changelog_page():
+    return render_template("changelog.html", entries=CHANGELOG_ENTRIES)
 
 
 # =============================================================

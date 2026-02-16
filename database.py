@@ -247,6 +247,7 @@ def _init_sqlite(conn):
         ("sellers", "is_admin", "INTEGER DEFAULT 0"),
         ("sellers", "referral_code", "TEXT"),
         ("sellers", "referred_by", "TEXT"),
+        ("sellers", "onboard_email_stage", "INTEGER DEFAULT 0"),
     ]
     for table, column, col_type in migrations:
         try:
@@ -393,6 +394,7 @@ def _init_pg(conn):
         ("sellers", "is_admin", "INTEGER DEFAULT 0"),
         ("sellers", "referral_code", "TEXT"),
         ("sellers", "referred_by", "TEXT"),
+        ("sellers", "onboard_email_stage", "INTEGER DEFAULT 0"),
     ]
     for table, column, col_type in pg_migrations:
         c.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_type}")
@@ -1182,6 +1184,31 @@ def apply_referral_reward(referrer_seller_id):
         current_settings["referral_days_earned"] = days_already_earned + days_to_add
         conn.execute("UPDATE sellers SET settings = %s WHERE id = %s",
                       (json.dumps(current_settings), referrer_seller_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_sellers_needing_onboard_email(stage, min_days_ago):
+    """Get sellers at a specific onboard stage whose account is old enough for the next email."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(f"""
+            SELECT id, email, shop_name FROM sellers
+            WHERE onboard_email_stage = %s
+              AND created_at <= {_ago(f'{min_days_ago} days')}
+        """, (stage,)).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def set_onboard_email_stage(seller_id, stage):
+    """Update the onboard email stage for a seller."""
+    conn = get_conn()
+    try:
+        conn.execute("UPDATE sellers SET onboard_email_stage = %s WHERE id = %s",
+                      (stage, seller_id))
         conn.commit()
     finally:
         conn.close()

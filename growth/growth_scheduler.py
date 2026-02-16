@@ -99,6 +99,15 @@ def init_scheduler(app=None):
         replace_existing=True,
     )
 
+    # Onboard email sequence — check every 6 hours
+    _scheduler.add_job(
+        lambda: _safe_run("onboard_emails", _run_onboard_emails),
+        "interval",
+        hours=6,
+        id="onboard_emails",
+        replace_existing=True,
+    )
+
     _scheduler.start()
     logger.info("Growth scheduler started — "
                 f"Commander every {SCHEDULE_COMMANDER_MINS}m, "
@@ -133,6 +142,35 @@ def _run_creator():
 def _run_writer():
     from growth.writer import run as writer_run
     return writer_run()
+
+
+def _run_onboard_emails():
+    """Send scheduled onboard emails (day 2 product reminder, day 5 tips, day 12 trial expiring)."""
+    from database import get_sellers_needing_onboard_email, set_onboard_email_stage
+    from email_service import send_product_reminder_email, send_tips_email, send_trial_expiring_email
+
+    base_url = os.environ.get("BASE_URL", "https://etsai.io")
+    sent = 0
+
+    # Stage 1 → 2: Product reminder (day 2+)
+    for s in get_sellers_needing_onboard_email(1, 2):
+        if send_product_reminder_email(s["email"], s["shop_name"], base_url):
+            set_onboard_email_stage(s["id"], 2)
+            sent += 1
+
+    # Stage 2 → 3: Tips email (day 5+)
+    for s in get_sellers_needing_onboard_email(2, 5):
+        if send_tips_email(s["email"], s["shop_name"], base_url):
+            set_onboard_email_stage(s["id"], 3)
+            sent += 1
+
+    # Stage 3 → 4: Trial expiring (day 12+)
+    for s in get_sellers_needing_onboard_email(3, 12):
+        if send_trial_expiring_email(s["email"], s["shop_name"], base_url):
+            set_onboard_email_stage(s["id"], 4)
+            sent += 1
+
+    return {"sent": sent}
 
 
 def shutdown_scheduler():
