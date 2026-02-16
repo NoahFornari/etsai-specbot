@@ -28,8 +28,9 @@ def _send_email(to_email, subject, html_body):
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = SMTP_FROM
+    msg["From"] = f"ETSAI <{SMTP_FROM}>"
     msg["To"] = to_email
+    msg["Reply-To"] = os.environ.get("SMTP_REPLY_TO", SMTP_FROM)
     msg.attach(MIMEText(html_body, "html"))
 
     try:
