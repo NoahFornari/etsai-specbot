@@ -1968,6 +1968,7 @@ def sitemap_xml():
         (base + "/terms", "0.3"),
         (base + "/support", "0.5"),
         (base + "/tools/message-generator", "0.7"),
+        (base + "/tools/checklist-generator", "0.7"),
     ]
     for niche_slug in NICHE_PAGES:
         urls.append((base + f"/for/{niche_slug}", "0.8"))
@@ -2279,6 +2280,54 @@ Output ONLY the message template text. No explanation, no markdown formatting.""
         flash("Could not generate template right now. Please try again.", "error")
 
     return render_template("message_generator.html", result=result, product_type=product_type)
+
+
+@app.route("/tools/checklist-generator", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+def checklist_generator():
+    """
+    Free tool: generate a custom order spec checklist.
+    Seller enters product type → AI generates a prioritized checklist of specs to collect.
+    """
+    if request.method == "GET":
+        return render_template("checklist_generator.html", result=None)
+
+    product_type = request.form.get("product_type", "").strip()[:200]
+    extra_details = request.form.get("extra_details", "").strip()[:500]
+    if not product_type:
+        flash("Please describe your product.", "error")
+        return redirect(url_for("checklist_generator"))
+
+    prompt = f"Product type: {product_type}"
+    if extra_details:
+        prompt += f"\nAdditional details: {extra_details}"
+
+    try:
+        from anthropic import Anthropic
+        client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=800,
+            system="""You generate custom order spec checklists for Etsy sellers.
+
+Given a product type, output a checklist of every detail/spec the seller should collect from buyers before starting production. Organize into sections:
+
+1. **Must-Have** — cannot make the item without these
+2. **Should-Have** — important for quality, will need follow-up if missed
+3. **Nice-to-Have** — improves the experience but optional
+
+For each item, include a brief note in parentheses explaining WHY it matters or a common pitfall.
+
+Use HTML formatting: <h3> for section headings, <ul><li> for items. Keep it practical and specific to the product type. No intro paragraph — jump straight into the checklist.""",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        result = response.content[0].text.strip()
+    except Exception as e:
+        logger.error("Checklist generator AI error: %s", e)
+        result = None
+        flash("Could not generate checklist right now. Please try again.", "error")
+
+    return render_template("checklist_generator.html", result=result, product_type=product_type)
 
 
 # =============================================================
