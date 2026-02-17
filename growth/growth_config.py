@@ -12,7 +12,7 @@ load_dotenv(override=True)
 # BUDGET
 # =============================================================
 
-DAILY_BUDGET = float(os.environ.get("GROWTH_DAILY_BUDGET", "5.00"))
+DAILY_BUDGET = float(os.environ.get("GROWTH_DAILY_BUDGET", "25.00"))
 
 # =============================================================
 # PER-AGENT QUOTAS (daily)
@@ -20,7 +20,7 @@ DAILY_BUDGET = float(os.environ.get("GROWTH_DAILY_BUDGET", "5.00"))
 
 SCOUT_MAX_LEADS_PER_DAY = int(os.environ.get("GROWTH_SCOUT_MAX_LEADS", "200"))
 WRITER_MAX_EMAILS_PER_DAY = int(os.environ.get("GROWTH_WRITER_MAX_EMAILS", "50"))
-WRITER_MAX_REDDIT_COMMENTS_PER_DAY = int(os.environ.get("GROWTH_WRITER_MAX_REDDIT_COMMENTS", "10"))
+WRITER_MAX_REDDIT_COMMENTS_PER_DAY = int(os.environ.get("GROWTH_WRITER_MAX_REDDIT_COMMENTS", "3"))
 WRITER_MAX_DMS_PER_DAY = int(os.environ.get("GROWTH_WRITER_MAX_DMS", "20"))
 LISTENER_MAX_SCANS_PER_DAY = int(os.environ.get("GROWTH_LISTENER_MAX_SCANS", "48"))
 CREATOR_MAX_VIDEOS_PER_DAY = int(os.environ.get("GROWTH_CREATOR_MAX_VIDEOS", "2"))
@@ -51,7 +51,7 @@ REVIEW_QUEUE_ETSY_CONVO = os.environ.get("GROWTH_REVIEW_ETSY_CONVO", "1") == "1"
 
 MIN_FOLLOWUP_GAP_DAYS = int(os.environ.get("GROWTH_MIN_FOLLOWUP_GAP", "3"))
 CROSS_CHANNEL_COOLDOWN_HOURS = int(os.environ.get("GROWTH_CROSS_CHANNEL_COOLDOWN", "48"))
-MIN_RESPONSE_RATE_PCT = float(os.environ.get("GROWTH_MIN_RESPONSE_RATE", "1.0"))
+MIN_RESPONSE_RATE_PCT = float(os.environ.get("GROWTH_MIN_RESPONSE_RATE", "2.0"))
 MAX_FOLLOWUPS_PER_LEAD = int(os.environ.get("GROWTH_MAX_FOLLOWUPS", "3"))
 
 # =============================================================

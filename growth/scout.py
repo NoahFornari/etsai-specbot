@@ -782,22 +782,23 @@ def score_lead(lead_data):
     if enrichment.get("sample_listing"):
         context_parts.append(f"Sample product: {enrichment['sample_listing']}")
 
-    prompt = f"""Score this Etsy seller as a potential customer for ETSAI (an AI tool that collects custom order specs from buyers via a smart chat link).
+    prompt = f"""Score this Etsy seller as a potential lead for outreach (we help sellers who do custom/personalized orders).
 
 LEAD DATA:
 {chr(10).join(context_parts)}
 
 Score 0-100 based on:
-- Custom order volume (sellers with many custom/personalized items need ETSAI more)
-- Business maturity (enough sales to benefit from automation, but not so big they have their own systems)
-- Sweet spot: 50-5000 sales, high custom %, active shop
+- Custom order focus (sellers doing mostly custom/personalized work score highest)
+- Active and engaged (good reviews, active listings)
+- Sweet spot: 10-5000 sales. Small shops doing 80%+ custom = best leads. Big shops with low custom % = worse.
+- Shops with 10-100 sales doing mostly custom work should score 50-70 (they need help the most)
 
-Also suggest a personalized outreach angle — one sentence about why ETSAI would help THIS specific seller.
+Also suggest a conversation starter — one genuine question about how they handle their custom order workflow. Do NOT mention any tool, product, or solution. Just ask about their process.
 
 RESPOND IN JSON:
-{{"score": 72, "tier": "HOT", "angle": "With 200+ custom jewelry orders, you're probably spending hours just collecting ring sizes and engraving text — that's exactly what ETSAI automates."}}
+{{"score": 65, "tier": "WARM", "angle": "Your custom pet portraits look amazing — how do you usually collect all the photo references and style preferences from buyers?"}}
 
-Tier rules: HOT (70+), WARM (40-69), COLD (<40).
+Tier rules: HOT (70+), WARM (35-69), COLD (<35).
 JSON only."""
 
     try:
@@ -813,7 +814,7 @@ JSON only."""
             score = 0
         tier = parsed.get("tier", "COLD")
         if tier not in ("HOT", "WARM", "COLD"):
-            tier = "HOT" if score >= 70 else "WARM" if score >= 40 else "COLD"
+            tier = "HOT" if score >= 70 else "WARM" if score >= 35 else "COLD"
         angle = parsed.get("angle", "")
 
         return score, tier, angle, cost
@@ -821,36 +822,46 @@ JSON only."""
         logger.error(f"Lead scoring error: {e}")
         # Fallback to basic scoring
         score = _basic_score(lead_data)
-        tier = "HOT" if score >= 70 else "WARM" if score >= 40 else "COLD"
+        tier = "HOT" if score >= 70 else "WARM" if score >= 35 else "COLD"
         return score, tier, "", 0
 
 
 def _basic_score(lead):
-    """Fallback scoring without AI (same logic as lead_scraper.py)."""
+    """Fallback scoring without AI. Favors custom focus over raw sales volume."""
     score = 0
     sales = lead.get("sale_count", 0) or 0
-    if sales >= 1000:
-        score += 30
-    elif sales >= 500:
+
+    # Sales: sweet spot is 10-2000. Small active shops score well.
+    if 10 <= sales <= 100:
+        score += 20  # Small but active — most likely to need help
+    elif 100 < sales <= 500:
         score += 25
-    elif sales >= 100:
+    elif 500 < sales <= 2000:
         score += 20
-    elif sales >= 50:
+    elif 2000 < sales <= 5000:
         score += 15
-    elif sales >= 10:
-        score += 8
+    elif sales > 5000:
+        score += 8   # Probably has their own systems already
 
-    if lead.get("custom_pct", 0) >= 50:
-        score += 25
-    elif lead.get("custom_pct", 0) >= 30:
+    # Custom percentage: THIS is the most important signal
+    custom_pct = lead.get("custom_pct", 0) or 0
+    if custom_pct >= 80:
+        score += 35
+    elif custom_pct >= 50:
+        score += 28
+    elif custom_pct >= 30:
         score += 20
+    elif custom_pct >= 10:
+        score += 10
 
+    # Good reviews = active and cares about quality
     rating = lead.get("review_average")
     if rating and rating >= 4.5:
         score += 10
 
-    if (lead.get("listing_count") or 0) >= 50:
-        score += 10
+    # Active listings
+    if (lead.get("listing_count") or 0) >= 10:
+        score += 5
 
     return min(score, 100)
 

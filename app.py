@@ -237,6 +237,24 @@ def signup():
     session["seller_id"] = seller_id
     logger.info("New seller signed up: %s", email)
 
+    # Track growth engine conversion — check if this signup matches a lead
+    try:
+        from growth.growth_db import get_conn as _gconn
+        gdb = _gconn()
+        try:
+            match = gdb.execute(
+                "SELECT id FROM growth_leads WHERE email = %s OR shop_name = %s LIMIT 1",
+                (email, shop_name)
+            ).fetchone()
+            if match:
+                from growth.growth_db import update_lead_status
+                update_lead_status(match["id"], "converted")
+                logger.info("Growth conversion: lead %s signed up as seller %s", match["id"], seller_id)
+        finally:
+            gdb.close()
+    except Exception as e:
+        logger.debug("Growth conversion check skipped: %s", e)
+
     # Send welcome email and mark stage 1
     base_url = request.url_root.rstrip("/")
     send_welcome_email(email, shop_name, base_url)
