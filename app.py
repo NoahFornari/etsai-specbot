@@ -1908,6 +1908,30 @@ LEAD INFO:
 
 
 # =============================================================
+# PWA — Service worker must be served from root for max scope
+# =============================================================
+
+@app.route("/service-worker.js")
+def service_worker():
+    resp = app.make_response(app.send_static_file("service-worker.js"))
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.route("/offline")
+def offline_page():
+    return """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ETSAI - Offline</title><style>body{font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;
+    height:100vh;margin:0;background:#f5efe4;color:#2c1810;}div{text-align:center;padding:2rem;}
+    h1{color:#4a6741;font-size:2rem;margin-bottom:0.5rem;}p{color:#78716c;}</style></head>
+    <body><div><h1>ETSAI</h1><p>You're offline right now.</p><p>Check your connection and try again.</p>
+    <button onclick="location.reload()" style="margin-top:1rem;padding:10px 24px;background:#4a6741;color:white;border:none;
+    border-radius:8px;cursor:pointer;font-size:1rem;">Retry</button></div></body></html>"""
+
+
+# =============================================================
 # SEO
 # =============================================================
 
