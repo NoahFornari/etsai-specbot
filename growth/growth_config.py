@@ -12,7 +12,7 @@ load_dotenv(override=True)
 # BUDGET
 # =============================================================
 
-DAILY_BUDGET = float(os.environ.get("GROWTH_DAILY_BUDGET", "25.00"))
+DAILY_BUDGET = float(os.environ.get("GROWTH_DAILY_BUDGET", "5.00"))
 
 # =============================================================
 # PER-AGENT QUOTAS (daily)

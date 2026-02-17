@@ -793,10 +793,10 @@ Score 0-100 based on:
 - Sweet spot: 10-5000 sales. Small shops doing 80%+ custom = best leads. Big shops with low custom % = worse.
 - Shops with 10-100 sales doing mostly custom work should score 50-70 (they need help the most)
 
-Also suggest a conversation starter — one genuine question about how they handle their custom order workflow. Do NOT mention any tool, product, or solution. Just ask about their process.
+Also suggest a conversation starter — a short, genuine compliment about their shop + one simple question about how they handle custom orders. Keep it natural, like one seller talking to another. No jargon.
 
 RESPOND IN JSON:
-{{"score": 65, "tier": "WARM", "angle": "Your custom pet portraits look amazing — how do you usually collect all the photo references and style preferences from buyers?"}}
+{{"score": 65, "tier": "WARM", "angle": "Love your custom jewelry work — do your buyers usually know exactly what they want or do you have to walk them through it?"}}
 
 Tier rules: HOT (70+), WARM (35-69), COLD (<35).
 JSON only."""
