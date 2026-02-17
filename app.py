@@ -43,7 +43,7 @@ from etsy_api import (
     generate_pkce_pair, get_oauth_url, exchange_code_for_tokens,
     get_shop_for_user, get_shop_listings, get_recent_orders
 )
-from marketing_content import BLOG_POSTS, COMPARISON_PAGES, CHANGELOG_ENTRIES, ABOUT_PAGE
+from marketing_content import BLOG_POSTS, COMPARISON_PAGES, CHANGELOG_ENTRIES, ABOUT_PAGE, SOLUTION_PAGES, FAQ_ITEMS
 from billing import (
     PLANS, get_plan, create_checkout_session, create_portal_session,
     handle_webhook_event, check_quota, get_usage_display,
@@ -1955,7 +1955,7 @@ def offline_page():
 
 @app.route("/robots.txt")
 def robots_txt():
-    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nAllow: /blog/\nAllow: /compare/\nAllow: /about\nAllow: /changelog\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /growth\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
+    content = "User-agent: *\nAllow: /\nAllow: /for/\nAllow: /tools/\nAllow: /blog/\nAllow: /compare/\nAllow: /solutions/\nAllow: /faq\nAllow: /about\nAllow: /changelog\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /admin\nDisallow: /growth\nDisallow: /intake/\nDisallow: /api/\nSitemap: " + request.host_url.rstrip("/") + "/sitemap.xml\n"
     return Response(content, mimetype="text/plain")
 
 
@@ -1976,6 +1976,12 @@ def sitemap_xml():
     for slug in BLOG_POSTS:
         urls.append((base + f"/blog/{slug}", "0.7"))
     urls.append((base + "/compare", "0.8"))
+    for slug in COMPARISON_PAGES:
+        urls.append((base + f"/compare/{slug}", "0.6"))
+    urls.append((base + "/solutions", "0.8"))
+    for slug in SOLUTION_PAGES:
+        urls.append((base + f"/solutions/{slug}", "0.9"))
+    urls.append((base + "/faq", "0.8"))
     urls.append((base + "/about", "0.5"))
     urls.append((base + "/changelog", "0.4"))
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -2195,6 +2201,37 @@ def blog_post(slug):
         abort(404)
     other_posts = [p for s, p in BLOG_POSTS.items() if s != slug][:2]
     return render_template("blog_post.html", post=post, related=other_posts)
+
+
+# =============================================================
+# FAQ PAGE
+# =============================================================
+
+@app.route("/faq")
+def faq_page():
+    """FAQ page with structured Q&A targeting AI queries."""
+    return render_template("faq.html", items=FAQ_ITEMS)
+
+
+# =============================================================
+# SOLUTION PAGES — AI-optimized answer pages
+# =============================================================
+
+@app.route("/solutions")
+def solutions_index():
+    """List all solution pages."""
+    pages = sorted(SOLUTION_PAGES.values(), key=lambda p: p["slug"])
+    return render_template("solutions_index.html", pages=pages)
+
+
+@app.route("/solutions/<slug>")
+def solution_page(slug):
+    """Individual solution page."""
+    page = SOLUTION_PAGES.get(slug)
+    if not page:
+        abort(404)
+    other_pages = [p for s, p in SOLUTION_PAGES.items() if s != slug][:3]
+    return render_template("solution_page.html", page=page, related=other_pages)
 
 
 # =============================================================
