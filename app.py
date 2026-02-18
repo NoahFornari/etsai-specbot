@@ -1739,16 +1739,8 @@ def _format_growth_result(agent, result):
     return summary
 
 
-@app.route("/growth/trigger", methods=["POST"])
-def growth_trigger():
-    seller_id = session.get("seller_id")
-    if not seller_id:
-        return redirect(url_for("home"))
-    seller = get_seller(seller_id)
-    if not seller or not seller.get("is_admin"):
-        abort(404)
-
-    agent = request.form.get("agent", "commander")
+def _run_agent_background(agent):
+    """Run a growth agent in a background thread and log the result."""
     try:
         if agent == "commander":
             from growth.commander import run_cycle
@@ -1766,16 +1758,32 @@ def growth_trigger():
             from growth.creator import run as creator_run
             result = creator_run()
         else:
-            flash(f"Unknown agent: {agent}", "error")
-            return redirect(url_for("growth_dashboard"))
+            return
 
-        # Build a human-readable summary instead of raw JSON
         summary = _format_growth_result(agent, result)
-        flash(summary, "success")
+        logger.info("Background agent %s finished: %s", agent, summary)
     except Exception as e:
-        logger.error("Growth trigger error: %s", e)
-        flash(f"Error running {agent}: {str(e)[:200]}", "error")
+        logger.error("Background agent %s error: %s", agent, e)
 
+
+@app.route("/growth/trigger", methods=["POST"])
+def growth_trigger():
+    seller_id = session.get("seller_id")
+    if not seller_id:
+        return redirect(url_for("home"))
+    seller = get_seller(seller_id)
+    if not seller or not seller.get("is_admin"):
+        abort(404)
+
+    agent = request.form.get("agent", "commander")
+    if agent not in ("commander", "scout", "writer", "listener", "creator"):
+        flash(f"Unknown agent: {agent}", "error")
+        return redirect(url_for("growth_dashboard"))
+
+    import threading
+    t = threading.Thread(target=_run_agent_background, args=(agent,), daemon=True)
+    t.start()
+    flash(f"{agent.title()} started in background. Refresh in a few minutes to see results.", "success")
     return redirect(url_for("growth_dashboard"))
 
 
