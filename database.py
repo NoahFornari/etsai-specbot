@@ -438,7 +438,7 @@ def create_seller(email, shop_name, platform="etsy", password_hash=None):
 def get_seller(seller_id):
     conn = get_conn()
     try:
-        row = conn.execute("SELECT * FROM sellers WHERE id = %s", (seller_id,)).fetchone()
+        row = conn.execute("SELECT * FROM sellers WHERE id = %s", (str(seller_id),)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
