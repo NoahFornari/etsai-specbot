@@ -185,28 +185,46 @@ def classify_thread(thread_data):
     Use Claude Haiku to classify a thread's relevance and opportunity score.
     Returns: {relevance: "relevant"/"maybe"/"irrelevant", score: 0-100, reasoning: str}
     """
+    # Calculate thread age for recency bonus
+    age_hours = 0
+    if thread_data.get("created_utc"):
+        age_hours = (time.time() - thread_data["created_utc"]) / 3600
+
     prompt = f"""Classify this Reddit thread for ETSAI outreach opportunity.
 
-ETSAI is an AI tool that helps Etsy sellers collect custom order specifications from buyers via a smart chat link (replaces messy back-and-forth Etsy messages).
+ETSAI is an AI tool that helps Etsy sellers collect custom order specifications from buyers via a smart chat link (replaces messy back-and-forth messages).
 
 THREAD:
 Subreddit: r/{thread_data.get('subreddit', '?')}
 Title: {thread_data.get('title', '')}
 Body: {thread_data.get('body', '')[:600]}
+Age: {age_hours:.0f} hours old | Comments: {thread_data.get('num_comments', 0)}
 
-Is this thread relevant for ETSAI? Would a helpful reply mentioning ETSAI be appropriate?
+Mark as "relevant" if ANY of these apply:
+- Etsy seller discussing custom orders, commissions, or made-to-order items
+- Seller frustrated with buyer communication or back-and-forth messaging
+- Someone asking how to manage/organize/scale custom orders
+- Seller discussing intake forms, questionnaires, or collecting buyer info
+- Seller overwhelmed by order volume or personalization requests
+- Anyone asking about tools/apps/systems for Etsy custom order workflow
+- Seller sharing pain points about miscommunication on custom specs
 
-Consider:
-- Is the poster an Etsy seller struggling with custom order management?
-- Are they asking about intake forms, spec collection, or buyer communication?
-- Would mentioning ETSAI feel natural and helpful (not spammy)?
-- Is this a thread where the community would welcome tool recommendations?
+Mark as "maybe" if:
+- General Etsy seller discussion that could benefit from ETSAI but isn't directly about custom orders
+- Thread about scaling a handmade/custom business
+
+Mark as "irrelevant" if:
+- Not about selling, custom orders, or Etsy
+- About shipping, taxes, SEO, marketing, or other unrelated topics
+- Thread is a showcase/promotion, not a discussion
+
+IMPORTANT: Newer threads (under 6 hours) should score higher — more people will see a reply.
+Threads with few comments are BETTER — less competition, reply is more visible.
 
 RESPOND IN JSON:
-{{"relevance": "relevant", "score": 85, "reasoning": "Seller asking about better ways to collect custom order details from buyers"}}
+{{"relevance": "relevant", "score": 85, "reasoning": "Seller asking about managing custom orders"}}
 
-Relevance: "relevant" (respond), "maybe" (queue for review), "irrelevant" (skip).
-Score: 0-100 opportunity score.
+Score: 0-100. Boost score for threads under 3 hours old and with <5 comments.
 JSON only."""
 
     try:
@@ -446,8 +464,11 @@ def run():
         if threads:
             # Classify
             classified = classify_threads(threads)
-            relevant = [t for t in classified if t.get("relevance") == "relevant"]
+            relevant = [t for t in classified if t.get("relevance") in ("relevant", "maybe")]
             result["relevant"] = len(relevant)
+
+            # Sort by recency — newer threads get more visibility
+            relevant.sort(key=lambda t: t.get("created_utc", 0), reverse=True)
 
             # Update learnings after classification
             if LEARNING_ENABLED:
@@ -456,7 +477,7 @@ def run():
                 except Exception as e:
                     logger.error(f"Listener learning update error: {e}")
 
-            # Draft replies for relevant threads
+            # Draft replies for relevant threads (newest first)
             from growth.writer import draft_reddit_reply
             for thread in relevant[:5]:  # Top 5
                 msg_id = draft_reddit_reply(thread)
