@@ -449,12 +449,12 @@ def _extract_shop_urls(text):
 
 
 def _classify_leads_batch(posts):
-    """Use Claude to classify which Reddit posters are real Etsy sellers
-    who do custom/personalized work. Processes in batches of 8.
-    Returns list of posts with classification added."""
+    """Use Claude to classify AND score Reddit posters in one call.
+    Determines if they're sellers, what niche, and scores them 0-100.
+    Returns list of posts with classification + score added."""
 
     classified = []
-    batch_size = 4
+    batch_size = 6
 
     for i in range(0, len(posts), batch_size):
         batch = posts[i:i + batch_size]
@@ -465,26 +465,34 @@ def _classify_leads_batch(posts):
             shop_str = f" | Shop: {shop_urls[0]}" if shop_urls else ""
             post_summaries.append(
                 f"{idx + 1}. [r/{p['subreddit']}] u/{p['author']}: "
-                f"{p['title'][:120]}\n   {p['body'][:150]}{shop_str}"
+                f"{p['title'][:120]}\n   {p['body'][:200]}{shop_str}"
             )
 
-        prompt = f"""Analyze these Reddit posts. For each one, determine:
-1. Is this person an Etsy seller? (yes/no/maybe)
-2. Do they sell custom, personalized, or made-to-order products? (yes/no/unclear)
-3. Would they benefit from a tool that automates collecting custom order specs from buyers? (high/medium/low/none)
-4. What niche do they sell in? (jewelry, portraits, signs, wedding, clothing, home_decor, pet_products, stationery, leather, kids, other, unknown)
+        prompt = f"""Analyze these Reddit posts. For each one, classify AND score as a potential lead.
+
+We help Etsy sellers who do custom/personalized orders. Best leads: small-medium shops (10-2000 sales) doing 50%+ custom work.
 
 POSTS:
 {chr(10).join(post_summaries)}
 
-RESPOND IN JSON — array of objects, one per post:
-[{{"post": 1, "is_seller": "yes", "does_custom": "yes", "etsai_fit": "high", "niche": "jewelry"}}, ...]
+For each post determine:
+- is_seller: yes/no/maybe
+- does_custom: yes/no/unclear
+- niche: jewelry/portraits/signs/wedding/clothing/home_decor/pet_products/stationery/leather/kids/other/unknown
+- score: 0-100 lead quality (70+ = HOT, 35-69 = WARM, <35 = COLD)
+- angle: one-sentence conversation starter about their custom order process (genuine, curious)
 
-Be strict: only mark "high" fit if they clearly do custom work and would genuinely benefit.
+Scoring guide:
+- Clearly does custom work + active shop = 60-80
+- Maybe does custom + seller = 30-50
+- Not a seller or no custom work = 0-20
+
+RESPOND IN JSON array:
+[{{"post": 1, "is_seller": "yes", "does_custom": "yes", "niche": "jewelry", "score": 65, "angle": "Love your custom rings — do buyers usually know exactly what they want?"}}]
 JSON array only."""
 
         try:
-            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=800)
+            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=1000)
             clean = raw.strip()
             if clean.startswith("```"):
                 clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
@@ -496,8 +504,12 @@ JSON array only."""
                     post = batch[idx].copy()
                     post["is_seller"] = result.get("is_seller", "no")
                     post["does_custom"] = result.get("does_custom", "no")
-                    post["etsai_fit"] = result.get("etsai_fit", "none")
+                    score = min(max(int(result.get("score", 0)), 0), 100)
+                    post["etsai_fit"] = "high" if score >= 60 else "medium" if score >= 35 else "low" if score > 0 else "none"
                     post["niche"] = result.get("niche", "unknown")
+                    post["score"] = score
+                    post["tier"] = "HOT" if score >= 70 else "WARM" if score >= 35 else "COLD"
+                    post["outreach_angle"] = result.get("angle", "")
                     post["shop_urls"] = _extract_shop_urls(
                         f"{post['title']} {post['body']}"
                     )
@@ -506,7 +518,6 @@ JSON array only."""
             time.sleep(0.3)
         except Exception as e:
             logger.error(f"Scout: batch classification error: {e}")
-            # On error, skip this batch rather than crash
             continue
 
     return classified
@@ -562,6 +573,9 @@ def _dedup_and_save_leads(classified_posts):
         )
         if lead_id:
             leads_added += 1
+            # Apply pre-computed score from classification (skip separate scoring call)
+            if post.get("score") and post.get("tier"):
+                update_lead_score(lead_id, post["score"], post["tier"], post.get("outreach_angle", ""))
 
     return leads_added
 
@@ -867,12 +881,13 @@ def _basic_score(lead):
 
 
 def score_unscored_leads(limit=50):
-    """Score leads that haven't been AI-scored yet (score == 0)."""
+    """Score leads that haven't been AI-scored yet (score == 0).
+    Reddit leads are pre-scored during classification, so this mainly catches Etsy leads."""
     from growth.growth_db import get_conn
     conn = get_conn()
     try:
         rows = conn.execute(
-            "SELECT * FROM growth_leads WHERE score = 0 ORDER BY created_at ASC LIMIT %s",
+            "SELECT * FROM growth_leads WHERE score = 0 AND source != 'reddit' ORDER BY created_at ASC LIMIT %s",
             (limit,)
         ).fetchall()
     finally:
@@ -1068,9 +1083,13 @@ def run(niches=None):
     etsy_leads = 0
     reddit_leads = 0
 
-    # Etsy discovery
-    for niche in niches:
-        etsy_leads += discover_etsy_leads(niche, limit=30)
+    # Etsy discovery — skip if API key isn't active (scraping gets 403)
+    etsy_api_key = os.getenv("ETSY_API_KEY", "")
+    if etsy_api_key:
+        for niche in niches:
+            etsy_leads += discover_etsy_leads(niche, limit=30)
+    else:
+        logger.info("Scout: Skipping Etsy discovery — no active API key")
 
     # Reddit discovery
     reddit_leads += discover_reddit_leads()

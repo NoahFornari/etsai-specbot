@@ -167,6 +167,14 @@ def _init_growth_sqlite(conn):
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS growth_seen_threads (
+            thread_id TEXT PRIMARY KEY,
+            subreddit TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     _create_growth_indexes(conn)
 
 
@@ -299,6 +307,14 @@ def _init_growth_pg(conn):
             reddit_comments INTEGER DEFAULT 0,
             total_spend REAL DEFAULT 0,
             notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS growth_seen_threads (
+            thread_id TEXT PRIMARY KEY,
+            subreddit TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -1141,5 +1157,51 @@ def get_top_learnings(agent, learning_type, limit=10, min_sample=3):
                 pass
             results.append(d)
         return results
+    finally:
+        conn.close()
+
+
+# =============================================================
+# SEEN THREADS (persistent dedup for Listener)
+# =============================================================
+
+def is_thread_seen(thread_id):
+    """Check if a thread has already been processed."""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT 1 FROM growth_seen_threads WHERE thread_id = %s", (thread_id,)).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def mark_threads_seen(thread_ids, subreddit=None):
+    """Mark threads as seen so they aren't re-classified after deploys."""
+    if not thread_ids:
+        return
+    conn = get_conn()
+    try:
+        for tid in thread_ids:
+            try:
+                conn.execute(
+                    "INSERT INTO growth_seen_threads (thread_id, subreddit) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (tid, subreddit)
+                )
+            except Exception:
+                pass  # Ignore duplicates
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def cleanup_old_seen_threads(days=7):
+    """Remove seen threads older than N days to prevent table bloat."""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "DELETE FROM growth_seen_threads WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '%s days'",
+            (days,)
+        )
+        conn.commit()
     finally:
         conn.close()

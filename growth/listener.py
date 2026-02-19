@@ -21,6 +21,7 @@ from ai_engine import call_claude, AI_MODEL_CHEAP, AI_MODEL_SMART
 from growth.growth_db import (
     add_growth_message, log_agent_action, add_content,
     upsert_learning, get_top_learnings, get_learnings,
+    is_thread_seen, mark_threads_seen, cleanup_old_seen_threads,
 )
 from growth.growth_config import (
     REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET,
@@ -30,9 +31,6 @@ from growth.growth_config import (
 )
 
 logger = logging.getLogger("etsai.growth.listener")
-
-# Track threads we've already seen (in-memory for current process)
-_seen_threads = set()
 
 
 # =============================================================
@@ -88,14 +86,13 @@ def _scan_reddit_json(subreddits, since_hours=6, limit=25):
                     continue
 
                 post_id = post.get("id", "")
-                if post_id in _seen_threads:
+                if is_thread_seen(post_id):
                     continue
 
                 author = post.get("author")
                 if not author or author in ("[deleted]", "AutoModerator"):
                     continue
 
-                _seen_threads.add(post_id)
                 permalink = post.get("permalink", "")
 
                 threads.append({
@@ -180,89 +177,87 @@ def scan_rss_feeds(feed_urls=None):
 # CLAUDE CLASSIFICATION
 # =============================================================
 
-def classify_thread(thread_data):
-    """
-    Use Claude Haiku to classify a thread's relevance and opportunity score.
-    Returns: {relevance: "relevant"/"maybe"/"irrelevant", score: 0-100, reasoning: str}
-    """
-    # Calculate thread age for recency bonus
-    age_hours = 0
-    if thread_data.get("created_utc"):
-        age_hours = (time.time() - thread_data["created_utc"]) / 3600
-
-    prompt = f"""Classify this Reddit thread for ETSAI outreach opportunity.
-
-ETSAI is an AI tool that helps Etsy sellers collect custom order specifications from buyers via a smart chat link (replaces messy back-and-forth messages).
-
-THREAD:
-Subreddit: r/{thread_data.get('subreddit', '?')}
-Title: {thread_data.get('title', '')}
-Body: {thread_data.get('body', '')[:600]}
-Age: {age_hours:.0f} hours old | Comments: {thread_data.get('num_comments', 0)}
-
-Mark as "relevant" if ANY of these apply:
-- Etsy seller discussing custom orders, commissions, or made-to-order items
-- Seller frustrated with buyer communication or back-and-forth messaging
-- Someone asking how to manage/organize/scale custom orders
-- Seller discussing intake forms, questionnaires, or collecting buyer info
-- Seller overwhelmed by order volume or personalization requests
-- Anyone asking about tools/apps/systems for Etsy custom order workflow
-- Seller sharing pain points about miscommunication on custom specs
-
-Mark as "maybe" if:
-- General Etsy seller discussion that could benefit from ETSAI but isn't directly about custom orders
-- Thread about scaling a handmade/custom business
-
-Mark as "irrelevant" if:
-- Not about selling, custom orders, or Etsy
-- About shipping, taxes, SEO, marketing, or other unrelated topics
-- Thread is a showcase/promotion, not a discussion
-
-IMPORTANT: Newer threads (under 6 hours) should score higher — more people will see a reply.
-Threads with few comments are BETTER — less competition, reply is more visible.
-
-RESPOND IN JSON:
-{{"relevance": "relevant", "score": 85, "reasoning": "Seller asking about managing custom orders"}}
-
-Score: 0-100. Boost score for threads under 3 hours old and with <5 comments.
-JSON only."""
-
-    try:
-        raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=200)
-        clean = raw.strip()
-        if clean.startswith("```"):
-            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
-        parsed = json.loads(clean)
-
-        return {
-            "relevance": parsed.get("relevance", "irrelevant"),
-            "score": min(max(int(parsed.get("score", 0)), 0), 100),
-            "reasoning": parsed.get("reasoning", ""),
-            "cost": cost,
-        }
-    except Exception as e:
-        logger.error(f"Listener classify error: {e}")
-        return {"relevance": "irrelevant", "score": 0, "reasoning": str(e), "cost": 0}
-
-
 def classify_threads(threads):
-    """Classify a batch of threads and return sorted by relevance/score."""
+    """Batch-classify threads using Claude. Processes 8 at a time instead of 1-by-1."""
+    if not threads:
+        return []
+
     results = []
     total_cost = 0
+    batch_size = 8
 
-    for thread in threads:
-        classification = classify_thread(thread)
-        total_cost += classification.get("cost", 0)
-        thread.update(classification)
-        results.append(thread)
-        time.sleep(0.2)
+    for i in range(0, len(threads), batch_size):
+        batch = threads[i:i + batch_size]
+
+        thread_summaries = []
+        for idx, t in enumerate(batch):
+            age_hours = (time.time() - t.get("created_utc", time.time())) / 3600
+            thread_summaries.append(
+                f"{idx + 1}. [r/{t.get('subreddit', '?')}] \"{t.get('title', '')}\" "
+                f"({age_hours:.0f}h old, {t.get('num_comments', 0)} comments)\n"
+                f"   {t.get('body', '')[:200]}"
+            )
+
+        prompt = f"""Classify these Reddit threads for outreach opportunity.
+
+We help Etsy sellers who do custom/personalized orders collect buyer specs via an AI chat link.
+
+THREADS:
+{chr(10).join(thread_summaries)}
+
+For each thread, classify:
+- relevance: "relevant" / "maybe" / "irrelevant"
+- score: 0-100
+- reasoning: one short sentence
+
+Mark "relevant" if ANY apply:
+- Etsy seller discussing custom orders, commissions, made-to-order
+- Frustrated with buyer communication or back-and-forth messaging
+- Asking how to manage/organize/scale custom orders
+- Overwhelmed by personalization requests or order volume
+- Discussing tools/systems for custom order workflow
+
+Mark "maybe" if: general Etsy seller discussion or scaling handmade business
+Mark "irrelevant" if: not about selling/custom orders, about shipping/taxes/SEO, or just a showcase
+
+IMPORTANT: Newer threads (under 6h) and threads with few comments score HIGHER.
+
+RESPOND IN JSON array:
+[{{"thread": 1, "relevance": "relevant", "score": 85, "reasoning": "Seller asking about managing custom orders"}}]
+JSON array only."""
+
+        try:
+            raw, cost, inp, out = call_claude(prompt, AI_MODEL_CHEAP, max_tokens=600)
+            total_cost += cost
+            clean = raw.strip()
+            if clean.startswith("```"):
+                clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
+            parsed = json.loads(clean)
+
+            for result in parsed:
+                idx = result.get("thread", 0) - 1
+                if 0 <= idx < len(batch):
+                    batch[idx]["relevance"] = result.get("relevance", "irrelevant")
+                    batch[idx]["score"] = min(max(int(result.get("score", 0)), 0), 100)
+                    batch[idx]["reasoning"] = result.get("reasoning", "")
+                    results.append(batch[idx])
+
+            time.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Listener batch classify error: {e}")
+            # On error, mark batch as irrelevant
+            for t in batch:
+                t["relevance"] = "irrelevant"
+                t["score"] = 0
+                t["reasoning"] = f"classify error: {e}"
+                results.append(t)
 
     # Sort: relevant first, then by score
     relevance_order = {"relevant": 0, "maybe": 1, "irrelevant": 2}
     results.sort(key=lambda t: (relevance_order.get(t.get("relevance", "irrelevant"), 2), -t.get("score", 0)))
 
     log_agent_action("listener", "classify_threads", True,
-                     {"classified": len(results), "relevant": sum(1 for r in results if r.get("relevance") == "relevant")},
+                     {"classified": len(results), "relevant": sum(1 for r in results if r.get("relevance") in ("relevant", "maybe"))},
                      cost=total_cost)
 
     return results
@@ -455,11 +450,21 @@ def run():
         "pain_points": [],
     }
 
+    # Cleanup old seen threads (keep last 7 days)
+    try:
+        cleanup_old_seen_threads(days=7)
+    except Exception:
+        pass
+
     # Scan Reddit
     if CHANNEL_REDDIT:
         smart_subs = _get_smart_subreddits()
         threads = scan_reddit(subreddits=smart_subs)
         result["threads_found"] = len(threads)
+
+        # Mark all fetched threads as seen (persists across deploys)
+        if threads:
+            mark_threads_seen([t["id"] for t in threads])
 
         if threads:
             # Classify

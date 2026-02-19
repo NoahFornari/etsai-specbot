@@ -228,45 +228,37 @@ def allocate_budget(metrics, model=None):
 
     playbook = _build_playbook()
 
-    prompt = f"""You are the growth strategist for ETSAI (an AI tool for Etsy sellers).
-Review today's metrics and decide how to allocate the remaining budget across our marketing agents.
+    prompt = f"""You are the growth LEADER for ETSAI — an AI tool that helps Etsy sellers collect custom order specs from buyers via a smart chat link (replaces messy back-and-forth messages).
 
-METRICS TODAY:
-- Leads discovered: {today.get('leads_discovered', 0)}
-- Messages sent: {today.get('messages_sent', 0)}
-- Videos published: {today.get('videos_published', 0)}
-- Budget remaining: ${budget_remaining:.2f} of ${DAILY_BUDGET:.2f}
+Your job is NOT just budget allocation. You are a strategic thinker. Analyze what's working, what's failing, and come up with NEW ideas for outreach, messaging, and growth.
 
-ALL-TIME:
+CURRENT STATE:
 - Total leads: {overview.get('leads_total', 0)} (HOT: {overview.get('leads_hot', 0)})
-- Contacted: {overview.get('leads_contacted', 0)}
-- Responded: {overview.get('leads_responded', 0)}
-- Converted: {overview.get('leads_converted', 0)}
+- Contacted: {overview.get('leads_contacted', 0)} | Responded: {overview.get('leads_responded', 0)} | Converted: {overview.get('leads_converted', 0)}
 - Reply rate: {overview.get('reply_rate', 0)}%
-- Total messages sent: {overview.get('messages_total', 0)}
-- Videos published: {overview.get('videos_total', 0)} ({overview.get('video_views', 0)} views)
+- Today: {today.get('leads_discovered', 0)} leads, {today.get('messages_sent', 0)} messages
+- Budget: ${budget_remaining:.2f} remaining of ${DAILY_BUDGET:.2f}
 - Total spend: ${overview.get('total_spend', 0):.2f}
 
-CHANNELS ACTIVE: Email={'ON' if CHANNEL_EMAIL else 'OFF'}, Reddit={'ON' if CHANNEL_REDDIT else 'OFF'}, YouTube={'ON' if CHANNEL_YOUTUBE else 'OFF'}, Etsy Convo={'ON' if CHANNEL_ETSY_CONVO else 'OFF'}
+CHANNELS: Email={'ON' if CHANNEL_EMAIL else 'OFF'}, Reddit={'ON' if CHANNEL_REDDIT else 'OFF'}, YouTube={'ON' if CHANNEL_YOUTUBE else 'OFF'}, Etsy Convo={'ON' if CHANNEL_ETSY_CONVO else 'OFF'}
 {playbook}
-IMPORTANT RULES:
-- Scout and Writer must ALWAYS run. Never pause lead discovery — we need a growing pipeline.
-- Listener should always run to find Reddit conversations.
-- The pipeline is: discover leads → draft messages → review queue → send. All stages run every cycle.
+THINK DEEPLY about:
+1. WHY aren't people responding? Is it the channel, the message, the targeting, or the product?
+2. What SPECIFIC messaging angles haven't we tried? (e.g., leading with a pain point vs. a compliment vs. asking for advice)
+3. What UNCONVENTIONAL outreach ideas could work? (e.g., engaging in communities first before pitching, creating value-first content, finding sellers who just posted about being overwhelmed)
+4. Which niches should we focus on and WHY based on actual results?
+5. What EXPERIMENTS should we run this cycle to learn faster?
 
-Based on these metrics{' and the playbook above' if playbook else ''}, decide:
-1. What niches should Scout focus on?
-2. How many emails/Reddit posts should Writer produce?
-3. What video topics should Creator make?
-4. Any strategy observations?
+All agents run every cycle. Your job is to set their STRATEGY — what niches, what messaging angle, what to try differently.
 
 RESPOND IN JSON:
 {{
     "scout": {{"run": true, "niches": ["jewelry", "wedding"], "lead_limit": 30}},
-    "writer": {{"run": true, "email_count": 10, "reddit_posts": 1}},
+    "writer": {{"run": true, "email_count": 5, "reddit_posts": 1}},
     "listener": {{"run": true}},
     "creator": {{"run": true, "video_count": 1, "topics": ["tip about ring size collection"]}},
-    "strategy_notes": "Focus on jewelry niche — highest conversion rate",
+    "strategy_notes": "Your strategic thinking here — what to try differently, new ideas, experiments to run. Be specific and actionable.",
+    "messaging_experiment": "Describe a specific new messaging angle to test this cycle",
     "pause_channels": []
 }}
 JSON only."""
