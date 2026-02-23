@@ -75,8 +75,20 @@
         <h3>Anthropic (Claude AI)</h3>
         <p>Buyer conversations are processed by Claude AI (Anthropic) to collect order specifications. Your data is processed under Anthropic's API terms and is not used to train their models.</p>
 
-        <h3>Etsy API</h3>
-        <p>If you connect your Etsy shop, we access your shop listings and orders via the Etsy API under their terms of service. We store OAuth tokens securely and only access data necessary for the service.</p>
+        <h3>Etsy API Integration</h3>
+        <p>If you connect your Etsy shop, we access the following data via the Etsy Open API v3:</p>
+        <ul>
+            <li><strong>Shop data:</strong> Shop name and public shop information (read-only)</li>
+            <li><strong>Listings data:</strong> Product titles, descriptions, and images (read-only)</li>
+        </ul>
+        <p>We do <strong>not</strong> access or store:</p>
+        <ul>
+            <li>Payment or financial information</li>
+            <li>Buyer personal information from Etsy</li>
+            <li>Order transaction details</li>
+            <li>Any data beyond Shop and Listings endpoints</li>
+        </ul>
+        <p>Etsy data is used solely to let sellers import their existing product listings into ETSAI for spec collection setup. We request <strong>read-only access</strong> — ETSAI never writes to or modifies your Etsy shop. OAuth tokens are stored securely and can be revoked at any time by disconnecting your shop from Settings or revoking access in your Etsy account. All Etsy API usage complies with <a href="https://www.etsy.com/legal/api/" style="color: var(--brand); text-decoration: none;">Etsy's API Terms of Use</a>.</p>
 
         <h2>4. Data Sharing</h2>
         <p>We do not sell your personal data. We share data only with the third-party services listed above, as necessary to provide the service.</p>
